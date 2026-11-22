@@ -280,6 +280,15 @@ h1,h2,h3,p{margin:0}
   .rec-barra,.rec-pista-txt,#rec-canvas{display:none}
   .recorrido.listo .rec-poster{opacity:1}
 }
+.rec-texto{transition:transform .8s var(--ease)}
+.rec-velo{transition:opacity .8s var(--ease)}
+.rec-velo.der{background:linear-gradient(270deg,rgba(28,33,36,.88) 0%,rgba(28,33,36,.55) 32%,rgba(28,33,36,0) 58%),linear-gradient(0deg,rgba(28,33,36,.6) 0%,rgba(28,33,36,0) 30%);opacity:0}
+.recorrido.derecha .rec-velo.der{opacity:1}.recorrido.derecha .rec-velo:not(.der){opacity:0}
+.recorrido.derecha .rec-texto{transform:translateX(calc(100vw - 100% - 2 * var(--m)))}
+.rec-titulo,.rec-kicker{transition:opacity .5s var(--ease),max-height .6s var(--ease);max-height:4em;overflow:hidden}
+.recorrido.avanzado .rec-titulo,.recorrido.avanzado .rec-kicker{opacity:0;max-height:0}
+@media (max-width:900px),(max-aspect-ratio:1/1){.recorrido.derecha .rec-texto{transform:none}.rec-velo.der{display:none}.recorrido.derecha .rec-velo:not(.der){opacity:1}}
+@media (prefers-reduced-motion:reduce){.rec-velo.der{display:none}.recorrido.avanzado .rec-titulo,.recorrido.avanzado .rec-kicker{opacity:1;max-height:none}}
 </style>
 </head>
 <body>
@@ -319,16 +328,16 @@ h1,h2,h3,p{margin:0}
 <section class="recorrido" id="recorrido" data-ink="#FFFFFF" aria-labelledby="h-rec">
   <div class="rec-pista">
     <div class="rec-escena">
-      <div class="rec-marco"><canvas id="rec-canvas" aria-hidden="true"></canvas><img class="rec-poster" src="recorrido/s/001.webp" alt="" width="720" height="405"><div class="rec-velo"></div></div>
+      <div class="rec-marco"><canvas id="rec-canvas" aria-hidden="true"></canvas><img class="rec-poster" src="recorrido/s/001.webp" alt="" width="720" height="405"><div class="rec-velo"></div><div class="rec-velo der"></div></div>
       <div class="rec-texto">
         <p class="rec-kicker">Así funciona en tu sala</p>
         <h2 class="d rec-titulo" id="h-rec">De la mesa a la cocina,<br>sin pasar por la barra.</h2>
         <ol class="rec-pasos">
           <li data-a="0" data-b=".153"><span class="n">01</span><b>Llegan a la mesa</b><span>La carta ya les espera: está en la tarjeta de la mesa.</span></li>
-          <li data-a=".153" data-b=".253"><span class="n">02</span><b>Acercan el móvil</b><span>Tarjeta NFC o código QR en cada mesa. Sin descargar ninguna app.</span></li>
-          <li data-a=".253" data-b=".453"><span class="n">03</span><b>Piden desde la carta</b><span>Con fotos, alérgenos y tres idiomas. Cada uno puede pedir desde su móvil.</span></li>
+          <li data-a=".153" data-b=".253" data-lado="d"><span class="n">02</span><b>Acercan el móvil</b><span>Tarjeta NFC o código QR en cada mesa. Sin descargar ninguna app.</span></li>
+          <li data-a=".253" data-b=".453" data-lado="d"><span class="n">03</span><b>Piden desde la carta</b><span>Con fotos, alérgenos y tres idiomas. Cada uno puede pedir desde su móvil.</span></li>
           <li data-a=".453" data-b=".553"><span class="n">04</span><b>Sala lo confirma</b><span>El pedido llega al móvil del camarero. Quien pulsa «Yo me encargo» se queda la mesa.</span></li>
-          <li data-a=".553" data-b=".62"><span class="n">05</span><b>Cocina ve solo lo suyo</b><span>La comanda se parte sola: los platos a cocina y la bebida a barra, con el tiempo de cada una.</span></li>
+          <li data-a=".553" data-b=".62" data-lado="d"><span class="n">05</span><b>Cocina ve solo lo suyo</b><span>La comanda se parte sola: los platos a cocina y la bebida a barra, con el tiempo de cada una.</span></li>
           <li data-a=".62" data-b=".727"><span class="n">06</span><b>Se prepara</b><span>Cocina lo marca como listo y sala se entera al momento.</span></li>
           <li data-a=".727" data-b=".86"><span class="n">07</span><b>Lo siguen desde la mesa</b><span>Ven en qué punto está su pedido, piden otra ronda o la cuenta.</span></li>
           <li data-a=".86" data-b="1.01"><span class="n">08</span><b>Y llega a la mesa</b><span>Y tú lo ves todo, en caja y en el ranking.</span></li>
@@ -552,7 +561,8 @@ $$(".sube").forEach((el,i)=>{ if(!el.style.getPropertyValue("--dl")) el.style.se
     actual+=(objetivo-actual)*.22; if(Math.abs(objetivo-actual)<.05) actual=objetivo;
     pintar(Math.round(actual));
     barra.style.transform=`scaleX(${p})`; sec.classList.toggle("empezado",p>.01);
-    pasos.forEach(li=>li.classList.toggle("on",p>=+li.dataset.a&&p<+li.dataset.b));
+    let act=null; pasos.forEach(li=>{ const on=p>=+li.dataset.a&&p<+li.dataset.b; li.classList.toggle("on",on); if(on) act=li; });
+    sec.classList.toggle("derecha",!!(act&&act.dataset.lado==="d")); sec.classList.toggle("avanzado",p>.12);
     if(actual!==objetivo) pedir();
   }
   // empieza a cargar cuando la sección se acerca
