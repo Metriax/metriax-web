@@ -241,6 +241,45 @@ h1,h2,h3,p{margin:0}
   .js .sube{opacity:1;transform:none}
 }
 .cab nav a.acceder{display:inline}
+/* ===== Recorrido: el vídeo de un pedido, fotograma a fotograma con el scroll ===== */
+.recorrido{position:relative;background:var(--pizarra);color:#fff}
+.rec-pista{height:720vh}
+.rec-escena{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden}
+.rec-marco{position:absolute;inset:0}
+.rec-marco canvas,.rec-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.rec-poster{transition:opacity .4s var(--ease)}
+.recorrido.listo .rec-poster{opacity:0}
+.rec-velo{position:absolute;inset:0;background:linear-gradient(90deg,rgba(28,33,36,.88) 0%,rgba(28,33,36,.55) 32%,rgba(28,33,36,0) 58%),linear-gradient(0deg,rgba(28,33,36,.6) 0%,rgba(28,33,36,0) 30%)}
+.rec-texto{position:absolute;left:var(--m);top:0;bottom:0;width:min(440px,40vw);display:flex;flex-direction:column;justify-content:center;gap:22px;padding:96px 0 72px}
+.rec-kicker{font-weight:650;font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--ocre)}
+.rec-titulo{font-size:clamp(34px,3.6vw,56px);color:#fff}
+.rec-pasos{list-style:none;margin:6px 0 0;padding:0;display:grid}
+.rec-pasos li{grid-area:1/1;display:grid;grid-template-columns:auto 1fr;column-gap:14px;row-gap:6px;align-content:start;opacity:0;transform:translateY(18px);transition:opacity .5s var(--ease),transform .6s var(--ease);pointer-events:none}
+.rec-pasos li.on{opacity:1;transform:none}
+.rec-pasos .n{grid-row:span 2;font-weight:800;font-size:15px;color:var(--pizarra);background:var(--ocre);width:38px;height:38px;display:grid;place-items:center}
+.rec-pasos b{font-size:clamp(22px,2.1vw,30px);line-height:1.1;font-weight:750;letter-spacing:-.01em}
+.rec-pasos li>span:last-child{font-size:18px;line-height:1.45;color:#E4E7E3;max-width:36ch}
+.rec-barra{position:absolute;left:var(--m);right:var(--m);bottom:28px;height:3px;background:rgba(255,255,255,.18)}
+.rec-barra i{position:absolute;left:0;top:0;bottom:0;width:100%;background:var(--ocre);transform-origin:left;transform:scaleX(0)}
+.rec-pista-txt{position:absolute;right:var(--m);bottom:44px;font-size:14px;color:#cfd3cf;transition:opacity .4s}
+.recorrido.empezado .rec-pista-txt{opacity:0}
+@media (max-width:900px),(max-aspect-ratio:1/1){
+  .rec-pista{height:620vh}
+  .rec-marco{inset:auto 0 auto 0;top:64px;aspect-ratio:16/9;height:auto}
+  .rec-velo{background:linear-gradient(0deg,var(--pizarra) 0%,rgba(28,33,36,0) 22%)}
+  .rec-texto{position:absolute;left:var(--m);right:var(--m);width:auto;top:calc(64px + 56.25vw);bottom:auto;padding:22px 0 0;gap:12px;justify-content:flex-start}
+  .rec-titulo{font-size:clamp(28px,8vw,40px)}
+  .rec-pasos li>span:last-child{font-size:17px}
+}
+@media (prefers-reduced-motion:reduce){
+  .rec-pista{height:auto}
+  .rec-escena{position:relative;height:auto;overflow:visible;padding:96px 0 48px}
+  .rec-marco{position:relative;inset:auto;aspect-ratio:16/9}
+  .rec-texto{position:relative;left:auto;width:auto;padding:24px var(--m) 0}
+  .rec-pasos{gap:22px}.rec-pasos li{grid-area:auto;opacity:1;transform:none}
+  .rec-barra,.rec-pista-txt,#rec-canvas{display:none}
+  .recorrido.listo .rec-poster{opacity:1}
+}
 </style>
 </head>
 <body>
@@ -274,6 +313,30 @@ h1,h2,h3,p{margin:0}
     <img src="img/m-avisos.jpg" width="780" height="1688" alt="">
     <img src="img/m-sala.jpg" width="780" height="1688" alt="">
     <img src="img/m-fichar.jpg" width="780" height="1688" alt="">
+  </div>
+</section>
+
+<section class="recorrido" id="recorrido" data-ink="#FFFFFF" aria-labelledby="h-rec">
+  <div class="rec-pista">
+    <div class="rec-escena">
+      <div class="rec-marco"><canvas id="rec-canvas" aria-hidden="true"></canvas><img class="rec-poster" src="recorrido/s/001.webp" alt="" width="720" height="405"><div class="rec-velo"></div></div>
+      <div class="rec-texto">
+        <p class="rec-kicker">Así funciona en tu sala</p>
+        <h2 class="d rec-titulo" id="h-rec">De la mesa a la cocina,<br>sin pasar por la barra.</h2>
+        <ol class="rec-pasos">
+          <li data-a="0" data-b=".153"><span class="n">01</span><b>Llegan a la mesa</b><span>La carta ya les espera: está en la tarjeta de la mesa.</span></li>
+          <li data-a=".153" data-b=".253"><span class="n">02</span><b>Acercan el móvil</b><span>Tarjeta NFC o código QR en cada mesa. Sin descargar ninguna app.</span></li>
+          <li data-a=".253" data-b=".453"><span class="n">03</span><b>Piden desde la carta</b><span>Con fotos, alérgenos y tres idiomas. Cada uno puede pedir desde su móvil.</span></li>
+          <li data-a=".453" data-b=".553"><span class="n">04</span><b>Sala lo confirma</b><span>El pedido llega al móvil del camarero. Quien pulsa «Yo me encargo» se queda la mesa.</span></li>
+          <li data-a=".553" data-b=".62"><span class="n">05</span><b>Cocina ve solo lo suyo</b><span>La comanda se parte sola: los platos a cocina y la bebida a barra, con el tiempo de cada una.</span></li>
+          <li data-a=".62" data-b=".727"><span class="n">06</span><b>Se prepara</b><span>Cocina lo marca como listo y sala se entera al momento.</span></li>
+          <li data-a=".727" data-b=".86"><span class="n">07</span><b>Lo siguen desde la mesa</b><span>Ven en qué punto está su pedido, piden otra ronda o la cuenta.</span></li>
+          <li data-a=".86" data-b="1.01"><span class="n">08</span><b>Y llega a la mesa</b><span>Y tú lo ves todo, en caja y en el ranking.</span></li>
+        </ol>
+      </div>
+      <div class="rec-barra" aria-hidden="true"><i></i></div>
+      <p class="rec-pista-txt" aria-hidden="true">Baja para ver el recorrido</p>
+    </div>
   </div>
 </section>
 
@@ -455,6 +518,47 @@ costura(); addEventListener("resize",costura); document.fonts&&document.fonts.re
 // entradas escalonadas, una vez
 const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target); } }),{rootMargin:"0px 0px -8% 0px"});
 $$(".sube").forEach((el,i)=>{ if(!el.style.getPropertyValue("--dl")) el.style.setProperty("--dl",(i%4)*70+"ms"); io.observe(el); });
+
+// Recorrido: los fotogramas reales del vídeo se pintan en un canvas según el scroll
+(()=>{
+  const sec=$("#recorrido"); if(!sec) return;
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const N=240, cv=$("#rec-canvas"), cx=cv.getContext("2d"), pista=$(".rec-pista",sec), barra=$(".rec-barra i",sec), pasos=$$(".rec-pasos li",sec);
+  const movil=()=>innerWidth<=900||innerWidth<=innerHeight;
+  const ligero=movil()||(navigator.connection&&navigator.connection.saveData);
+  const ruta=i=>`recorrido/${ligero?"s":"d"}/${String(i+1).padStart(3,"0")}.webp`;
+  const img=new Array(N), ok=new Uint8Array(N);
+  let objetivo=0, actual=0, pintado=-1, cargando=false;
+  // orden de carga: primero uno de cada 8 (para poder saltar), luego el resto
+  const orden=[]; for(let p=8;p>=1;p=p>>1){ for(let i=0;i<N;i+=p) if(!orden.includes(i)) orden.push(i); }
+  function cargar(){
+    if(cargando) return; cargando=true; let k=0, vivos=0;
+    const sig=()=>{ while(vivos<6 && k<orden.length){ const i=orden[k++]; vivos++; const im=new Image(); im.decoding="async";
+      im.onload=()=>{ img[i]=im; ok[i]=1; vivos--; if(i===0) sec.classList.add("listo"); pedir(); sig(); };
+      im.onerror=()=>{ vivos--; sig(); }; im.src=ruta(i); } };
+    sig();
+  }
+  function cercano(i){ if(ok[i]) return i; for(let d=1;d<N;d++){ if(i-d>=0&&ok[i-d]) return i-d; if(i+d<N&&ok[i+d]) return i+d; } return -1; }
+  function medir(){ const r=cv.getBoundingClientRect(), dpr=Math.min(devicePixelRatio||1,2); cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr); pintado=-1; pedir(); }
+  function pintar(i){
+    const j=cercano(i); if(j<0||j===pintado) return; const im=img[j], W=cv.width, H=cv.height;
+    const s=Math.max(W/im.naturalWidth,H/im.naturalHeight), w=im.naturalWidth*s, h=im.naturalHeight*s;
+    cx.drawImage(im,(W-w)/2,(H-h)/2,w,h); pintado=j;
+  }
+  function progreso(){ const r=pista.getBoundingClientRect(), total=r.height-innerHeight; return Math.max(0,Math.min(1,-r.top/total)); }
+  let raf=0; function pedir(){ if(!raf) raf=requestAnimationFrame(bucle); }
+  function bucle(){
+    raf=0; const p=progreso(); objetivo=p*(N-1);
+    actual+=(objetivo-actual)*.22; if(Math.abs(objetivo-actual)<.05) actual=objetivo;
+    pintar(Math.round(actual));
+    barra.style.transform=`scaleX(${p})`; sec.classList.toggle("empezado",p>.01);
+    pasos.forEach(li=>li.classList.toggle("on",p>=+li.dataset.a&&p<+li.dataset.b));
+    if(actual!==objetivo) pedir();
+  }
+  // empieza a cargar cuando la sección se acerca
+  new IntersectionObserver((es,o)=>{ if(es.some(e=>e.isIntersecting)){ cargar(); o.disconnect(); } },{rootMargin:"150% 0px"}).observe(sec);
+  addEventListener("scroll",pedir,{passive:true}); addEventListener("resize",medir); medir();
+})();
 </script>
 </body>
 </html>
