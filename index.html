@@ -433,6 +433,24 @@ h1,h2,h3,p{margin:0}
 @media (max-width:640px){.bento{grid-template-columns:1fr}.b-tile{min-height:0}.viaje .f{border-left:0;border-top:1px solid rgba(185,129,40,.28)}}
 @media (prefers-reduced-motion:reduce){.m-onda,.m-aviso,.m-pedir,.m-dot{animation:none}.m-barras i{transform:none}}
 .viaje{margin-top:0 !important}.viaje .f{padding-top:72px}
+/* ===== Hecho para la sala de un bar y Preguntas: estilo oscuro ===== */
+body{background:#101417}
+.sobre{padding:0;background:#121619}
+.sobre .panel{background:radial-gradient(55% 60% at 20% 100%,rgba(185,129,40,.16),rgba(185,129,40,0) 70%),radial-gradient(50% 50% at 95% 0%,rgba(150,43,35,.22),rgba(150,43,35,0) 70%),#141a1d;border-top:1px solid rgba(185,129,40,.25);border-bottom:1px solid rgba(185,129,40,.25);padding:clamp(56px,8vw,120px) var(--m)}
+.sobre h2{color:var(--cal)}
+.sobre h3{color:var(--cal)}
+.sobre .textos p{color:#AEB4B0}
+.sobre .textos>div:not(:last-child){padding-left:18px;border-left:1px solid var(--ocre)}
+.sobre .lobulo{box-shadow:0 40px 80px rgba(0,0,0,.5)}
+.sobre .btn{background:var(--granate);color:#fff}.sobre .btn:hover{background:#7E231C}
+.faq{background:#0f1315;color:var(--cal)}
+.faq h2{color:var(--cal)}
+.faq details{background:rgba(255,255,255,.035);border:1px solid rgba(222,224,221,.09);color:var(--cal)}
+.faq details:hover{border-color:rgba(185,129,40,.4)}
+.faq details[open]{background:rgba(185,129,40,.08);border-color:rgba(185,129,40,.55);color:var(--cal)}
+.faq details[open] summary{color:#E7C27A}
+.faq details p{color:#BFC4C0}
+.faq .mas::before,.faq .mas::after{background:var(--ocre)}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 <script type="module" src="nfc3d.js"></script>
@@ -555,7 +573,7 @@ h1,h2,h3,p{margin:0}
   <div class="i-nota sube"><p>Llegamos con el sistema preparado con tu marca, lo dejamos funcionando en tu sala y enseñamos a tu equipo a usarlo.</p><a class="btn" href="#contacto">Pide presupuesto</a></div>
 </section>
 
-<section class="sobre" data-ink="#1C2124" aria-labelledby="h-sobre">
+<section class="sobre" data-ink="#FFFFFF" aria-labelledby="h-sobre">
   <div class="panel" data-ink="#FFFFFF">
     <h2 class="d sube" id="h-sobre">Hecho para la sala de un bar</h2>
     <div class="lobulo"><video src="video/camarero-bucle.mp4" poster="video/camarero-bucle.jpg" muted loop playsinline autoplay preload="metadata" aria-label="Avisos de mesa apilándose en el móvil del camarero"></video></div>
@@ -567,7 +585,7 @@ h1,h2,h3,p{margin:0}
   </div>
 </section>
 
-<section class="faq" id="preguntas" data-ink="#1C2124" aria-labelledby="h-faq">
+<section class="faq" id="preguntas" data-ink="#FFFFFF" aria-labelledby="h-faq">
   <h2 class="d" id="h-faq">Lo que nos preguntan</h2>
   <div class="lista">
     <details name="faq" open><summary>¿El cliente tiene que instalar algo?<span class="mas" aria-hidden="true"></span></summary><p>No. Acerca el móvil a la tarjeta de su mesa (o escanea el código) y se abre tu carta en el navegador, sin crear cuenta.</p></details>
