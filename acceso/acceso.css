@@ -22,3 +22,4 @@ input:focus{outline:3px solid var(--ocre);outline-offset:0;border-color:var(--pi
 .pie a{color:var(--granate)}
 .enlace{background:none;border:0;padding:4px 0;font:inherit;font-size:15px;color:var(--granate);text-decoration:underline;cursor:pointer;justify-self:start}
 .aviso{margin:0;color:#1f5f3a;font-weight:600}
+[hidden]{display:none!important}
