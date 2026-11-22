@@ -4,7 +4,7 @@
    un restaurante nuevo. Todo se cambia desde el panel, sin tocar código:
    Marca y ajustes, Carta, Menú del día, Reglas y Tarjetas NFC.
    ===================================================================== */
-const PLATAFORMA = "Metriax";
+const PLATAFORMA = "metriiax";
 const BAR_DEF = {
   nombre:"Tres Hermanos", ciudad:"Móstoles · desde 1969", eslogan:"Alta cocina castellana. La casa del caracol.",
   mesas:24, interiorHasta:16, logo:"", color:"#c9a24a", color2:"#efe7d8", estilo:"noche", activo:true,
@@ -1198,7 +1198,7 @@ function acceso(r){
    Conviene que los revise un asesor antes de usarlos con clientes reales.
    ===================================================================== */
 // Datos de la empresa que presta la plataforma (encargado del tratamiento). Rellénalos una vez con los de tu empresa.
-const PROVEEDOR = {nombre:"Metriax", razon:"", nif:"", domicilio:"", email:""};
+const PROVEEDOR = {nombre:"metriiax", razon:"", nif:"", domicilio:"", email:""};
 const cfgLegal = () => ({razon:"",nif:"",domicilio:"",email:"",telefono:"",...(Store.get("config","legal")||{})});
 const dato = v => v ? esc(v) : `<span class="falta">[pendiente de completar]</span>`;
 const LG = (es,en,pt) => LANG==="en"?en:LANG==="pt"?pt:es;

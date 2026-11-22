@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Tres Hermanos · Pide desde tu mesa (demo Metriax)</title>
+<title>Tres Hermanos · Pide desde tu mesa (demo metriiax)</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Carta digital, pedidos en mesa con NFC, pantallas de cocina y barra, panel del restaurante y panel maestro.">
 <meta name="theme-color" content="#14100e">
@@ -723,6 +723,37 @@ html.cliente[data-estilo="noche"] .pant .ico{color:#14100e}
 #comanda-ui .cmd-env{background:#2f8a4f;color:#fff;border-color:#2f8a4f;font-weight:700;font-size:18px}
 #comanda-ui .cmd-env[disabled]{opacity:.45}
 
+
+/* ================= Estilo metriiax para las pantallas del equipo (camarero, panel, panel maestro) ================= */
+@font-face{font-family:"Instrument Sans";src:url(/fonts/instrument-sans.woff2) format("woff2");font-weight:400 700;font-display:swap}
+@font-face{font-family:"Syne";src:url(/fonts/syne.woff2) format("woff2");font-weight:400 800;font-display:swap}
+html.staff:not(.cliente){--papel:#f5f5f7;--papel-2:#ffffff;--papel-3:#e8e8ed;--blanco:#ffffff;--tinta:#1d1d1f;--tinta-2:#424245;--tinta-3:#6e6e73;--linea:rgba(0,0,0,.1);
+  --ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Instrument Sans","Segoe UI",sans-serif;--display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Instrument Sans","Segoe UI",sans-serif;--mano:var(--ui);--nota:var(--ui);--dpeso:700;
+  --borde-mano:16px;--sombra-c:rgba(0,0,0,.12);--sombra:0 1px 1px rgba(0,0,0,.04),0 12px 32px -12px rgba(0,0,0,.18);--tsombra:none;--r-chip:999px;letter-spacing:-.01em;-webkit-font-smoothing:antialiased}
+html.staff:not(.cliente),html.staff:not(.cliente) body,html.staff:not(.cliente) .app-cam,html.staff:not(.cliente) .panel{background:#f5f5f7;background-image:none}
+html.staff:not(.cliente) h1,html.staff:not(.cliente) h2,html.staff:not(.cliente) h3{letter-spacing:-.035em}
+/* cabecera del camarero: negro profundo */
+html.staff:not(.cliente) .c-cab{background:rgba(0,0,0,.92);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);color:#f5f5f7}
+html.staff:not(.cliente) .c-cab h1{color:#f5f5f7;letter-spacing:-.03em}
+html.staff:not(.cliente) .c-sel,html.staff:not(.cliente) .sonido,html.staff:not(.cliente) .seg{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.16);color:#f5f5f7;border-radius:999px}
+html.staff:not(.cliente) .seg button{color:#a1a1a6;border-radius:999px}
+html.staff:not(.cliente) .seg button[aria-pressed="true"]{background:#fff;color:#1d1d1f}
+/* barra lateral de los paneles */
+html.staff:not(.cliente) .p-side{background:#000;color:#f5f5f7;border-right:1px solid rgba(255,255,255,.08)}
+html.staff:not(.cliente) .p-side nav button{color:#d2d2d7;border-radius:12px;font-weight:600}
+html.staff:not(.cliente) .p-side nav button:hover{background:rgba(255,255,255,.08);color:#fff}
+html.staff:not(.cliente) .p-side nav button[aria-current="page"]{background:#fff;color:#1d1d1f}
+html.staff:not(.cliente) .p-side .abajo,html.staff:not(.cliente) .p-side .abajo a,html.staff:not(.cliente) .p-side .marca span{color:#a1a1a6;font-family:var(--ui);font-size:13px}
+html.staff:not(.cliente) .panel.admin .p-side .marca b{font-family:"Syne",var(--display);font-weight:800;font-size:26px;letter-spacing:-.05em;color:#fff;text-shadow:none}
+html.staff:not(.cliente) .panel.admin .p-side .marca b::after{content:"";display:inline-block;width:6px;height:6px;margin-left:2px;border-radius:50%;background:linear-gradient(180deg,#fff,#a7a9b0);transform:translateY(-13px)}
+html.staff:not(.cliente) .panel.admin .p-cab h1{color:#1d1d1f}
+html.staff:not(.cliente) .panel.admin{--rojo:#1d1d1f;--rojo-osc:#000;--amarillo:#1d1d1f}
+/* tarjetas, tablas y botones */
+html.staff:not(.cliente) .pant{border:1px solid rgba(0,0,0,.08);border-radius:22px;box-shadow:var(--sombra);background:#fff}
+html.staff:not(.cliente) .pant:hover{transform:translateY(-2px)}
+html.staff:not(.cliente) input,html.staff:not(.cliente) select,html.staff:not(.cliente) textarea{border-radius:12px}
+html.staff:not(.cliente) input:focus,html.staff:not(.cliente) select:focus,html.staff:not(.cliente) textarea:focus{outline:none;border-color:#1d1d1f;box-shadow:0 0 0 4px rgba(0,0,0,.08)}
+html.staff:not(.cliente) :focus-visible{outline:2px solid #0071e3;outline-offset:3px}
 </style>
 </head>
 <body>
@@ -741,6 +772,6 @@ html.cliente[data-estilo="noche"] .pant .ico{color:#14100e}
   <div class="v-pie"><span>Gíralo con el dedo. En el móvil, «Ponerlo en mi mesa» abre la cámara.</span><span>Modelo de muestra: el definitivo saldrá del escaneo del plato real.</span></div>
 </dialog>
 
-<script src="app.js"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

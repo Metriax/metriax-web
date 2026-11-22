@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Metriax · Tarjetas NFC y carta digital para bares y restaurantes</title>
+<title>Metriiax · Tarjetas NFC y carta digital para bares y restaurantes</title>
 <meta name="description" content="Diseñamos una tarjeta NFC única para cada local y la conectamos a tu carta digital. El cliente acerca el móvil y el pedido llega a cocina y al camarero.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%231d1d1f%22/%3E%3Ctext x=%2216%22 y=%2222%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2218%22 fill=%22white%22 text-anchor=%22middle%22%3Em%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -100,7 +100,7 @@ nav.top .btn{padding:7px 15px;font-size:13px}
 .ctrl button:hover,.ctrl label:hover{background:#fff}
 .ctrl label:focus-within{outline:2px solid #0071e3;outline-offset:3px}
 .ctrl input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
-@media (max-width:760px){.ring{min-height:440px}.giant{bottom:120px}.nowcard{min-width:0}.counter{display:none}}
+@media (max-width:760px){.ctrl .zbtn,.ctrl label{padding:0 12px;font-size:13px}.ring{min-height:440px}.giant{bottom:120px}.nowcard{min-width:0}.counter{display:none}}
 
 /* STRIP */
 .strip{background:var(--black);color:#f5f5f7;overflow:hidden;white-space:nowrap;font-family:var(--mono);font-size:13px;position:relative;z-index:2}
@@ -240,6 +240,17 @@ footer a{text-decoration:none}
 footer a:hover{color:#f5f5f7}
 
 /* LOGIN */
+.zoom{position:fixed;inset:0;z-index:95;display:none;align-items:center;justify-content:center;flex-direction:column;gap:18px;padding:24px;background:rgba(245,245,247,.72);backdrop-filter:saturate(180%) blur(24px);-webkit-backdrop-filter:saturate(180%) blur(24px);perspective:1600px}
+.zoom.show{display:flex;animation:zin .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes zin{from{opacity:0}to{opacity:1}}
+.zoom .zc{position:relative;height:min(78vh,calc((100vw - 48px)*1.585));aspect-ratio:54/85.6;border-radius:4.6%/2.9%;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.08),0 60px 120px -40px rgba(0,0,0,.55);transition:transform .2s ease;transform-style:preserve-3d;animation:zup .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes zup{from{transform:translateY(30px) scale(.92);opacity:0}}
+.zoom .zc img{width:100%;height:100%;object-fit:cover;display:block}
+.zoom .zc::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,0) 35%,rgba(255,255,255,.35) 50%,rgba(255,255,255,0) 65%);background-size:250% 100%;background-position:var(--gx,120%) 0}
+.zoom .zt{text-align:center}.zoom .zt b{display:block;font-size:19px;letter-spacing:-.02em}.zoom .zt small{color:var(--gray);font-size:14px}
+.zoom .zx{position:absolute;top:18px;right:18px;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:24px;line-height:1;cursor:pointer;box-shadow:0 8px 20px -10px rgba(0,0,0,.4);color:var(--ink)}
+.gcard .pic{cursor:zoom-in}
+.ctrl .zbtn{width:auto;border-radius:999px;padding:0 16px;font:500 14px var(--body)}
 .modal{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:16px}
 .modal.show{display:flex}
 .box{position:relative;width:min(440px,100%);background:rgba(255,255,255,.78);backdrop-filter:saturate(180%) blur(30px);-webkit-backdrop-filter:saturate(180%) blur(30px);border:1px solid rgba(255,255,255,.9);box-shadow:0 50px 100px -30px rgba(0,0,0,.5);color:var(--ink);border-radius:30px;padding:32px;display:flex;flex-direction:column;gap:16px;max-height:100%;overflow:auto}
@@ -373,10 +384,9 @@ body.cur-on #cur,body.cur-on #cur2{opacity:1}
 
 <nav class="top" aria-label="Principal">
   <div class="wrap">
-    <a class="logo" href="#inicio" aria-label="metriax, inicio">metriax<i></i></a>
+    <a class="logo" href="#inicio" aria-label="metriiax, inicio">metriiax<i></i></a>
     <div class="links">
       <a href="#como">Cómo funciona</a>
-      <a href="#crea">Diseña la tuya</a>
       <a href="#equipo">Paneles</a>
       <a href="#proceso">Cómo trabajamos</a>
       <a href="#faq">Preguntas</a>
@@ -388,7 +398,7 @@ body.cur-on #cur,body.cur-on #cur2{opacity:1}
 </nav>
 
 <header class="hero" id="inicio">
-  <div class="giant" aria-hidden="true">metriax</div>
+  <div class="giant" aria-hidden="true">metriiax</div>
   <div class="intro wrap">
     <div class="eyebrow">Tarjetas NFC para bares y restaurantes</div>
     <h1><span class="ln"><span>Toca la mesa.</span></span><span class="ln"><span><em>Pide.</em> Paga.</span></span></h1>
@@ -405,6 +415,7 @@ body.cur-on #cur,body.cur-on #cur2{opacity:1}
     <div class="ctrl">
       <button type="button" id="prevBtn" aria-label="Diseño anterior">←</button>
       <button type="button" id="nextBtn" aria-label="Diseño siguiente">→</button>
+      <button type="button" class="zbtn" id="zoomBtn">Ver en grande</button>
       <label>Prueba tu diseño<input type="file" accept="image/*" id="upFile"></label>
     </div>
   </div>
@@ -447,36 +458,6 @@ body.cur-on #cur,body.cur-on #cur2{opacity:1}
   </div>
 </section>
 
-<section class="block on-blue" id="crea">
-  <div class="wrap crea">
-    <div class="cfg">
-      <div class="eyebrow">Diseña la tuya</div>
-      <h2>Tu tarjeta, en diez segundos.</h2>
-      <p class="sub">Escribe el nombre de tu local, elige un estilo y un color, y mira cómo quedaría en tus mesas.</p>
-      <div class="f dark"><label for="c-name">Nombre del local</label><input id="c-name" maxlength="26" value="Tu Bar" autocomplete="off"></div>
-      <div class="opt"><span class="lab" id="lab-style">Estilo</span>
-        <div class="chips" role="group" aria-labelledby="lab-style" id="cStyles">
-          <button type="button" data-style="clasico" aria-pressed="true">Clásico</button>
-          <button type="button" data-style="pop" aria-pressed="false">Pop</button>
-          <button type="button" data-style="minimal" aria-pressed="false">Minimal</button>
-          <button type="button" data-style="noche" aria-pressed="false">Noche</button>
-        </div></div>
-      <div class="opt"><span class="lab" id="lab-color">Color</span>
-        <div class="sws" role="group" aria-labelledby="lab-color" id="cColors"></div></div>
-      <div class="opt row2">
-        <div class="f dark"><label for="c-sub">Debajo del nombre</label><input id="c-sub" maxlength="30" value="Almendralejo" autocomplete="off"></div>
-        <div class="f dark"><label for="c-mesa">Mesa</label><input id="c-mesa" type="number" min="1" max="99" value="7" inputmode="numeric"></div>
-      </div>
-      <div class="acts"><button class="btn btn-line" type="button" id="cFlip">Ver el dorso</button><button class="btn btn-sun" type="button" id="cWant">Quiero esta tarjeta</button></div>
-    </div>
-    <div class="preview" id="cPrev">
-      <div class="pcard" id="pcard"><canvas id="cFront" width="720" height="1142" aria-label="Vista previa de la cara delantera"></canvas><canvas id="cBack" width="720" height="1142" aria-label="Vista previa del dorso"></canvas><i class="sheen"></i></div>
-      <span class="pshadow" aria-hidden="true"></span>
-      <span class="note pnote">Vista previa orientativa · el diseño final lo dibujamos para tu local</span>
-    </div>
-  </div>
-</section>
-
 <section class="block on-paper" id="equipo">
   <div class="wrap">
     <div class="head">
@@ -484,7 +465,7 @@ body.cur-on #cur,body.cur-on #cur2{opacity:1}
         <div class="eyebrow">Un panel para cada uno</div>
         <h2>Cada persona entra y ve solo lo suyo.</h2>
       </div>
-      <p>El dueño controla ventas y carta, el camarero recibe los avisos de sus mesas y el equipo de metriax gestiona todos los locales. Entra en la demo con cualquiera de los tres accesos.</p>
+      <p>El dueño controla ventas y carta, el camarero recibe los avisos de sus mesas y el equipo de metriiax gestiona todos los locales. Entra en la demo con cualquiera de los tres accesos.</p>
     </div>
     <div class="roles">
       <article class="role">
@@ -510,7 +491,7 @@ body.cur-on #cur,body.cur-on #cur2{opacity:1}
         <button class="btn btn-ink" type="button" data-open-panel="camarero">Ver panel del camarero</button>
       </article>
       <article class="role">
-        <span class="who">Equipo metriax</span>
+        <span class="who">Equipo metriiax</span>
         <h3>Todos los locales</h3>
         <p>Restaurantes, tarjetas en mesas, visitas pendientes y solicitudes que llegan desde la web.</p>
         <div class="mini">
@@ -518,7 +499,7 @@ body.cur-on #cur,body.cur-on #cur2{opacity:1}
           <div class="r"><span>Tarjetas en mesas</span><b>120</b></div>
           <div class="r"><span>Solicitudes nuevas</span><span class="pill blue">3</span></div>
         </div>
-        <button class="btn btn-ink" type="button" data-open-panel="admin">Ver panel de metriax</button>
+        <button class="btn btn-ink" type="button" data-open-panel="admin">Ver panel de metriiax</button>
       </article>
     </div>
     <div class="feats">
@@ -573,7 +554,7 @@ body.cur-on #cur,body.cur-on #cur2{opacity:1}
       <div class="eyebrow">Contacto</div>
       <h2>Cuéntanos cómo es tu local.</h2>
       <p>Déjanos tus datos y quedamos para visitarte. Te enseñamos cómo funciona en tu propio local y una tarjeta de muestra con tu diseño.</p>
-      <ol><li>Nos dejas tus datos y el tipo de local.</li><li>Te llamamos y quedamos para visitarte.</li><li>Te acompañamos hasta el primer servicio con metriax.</li></ol>
+      <ol><li>Nos dejas tus datos y el tipo de local.</li><li>Te llamamos y quedamos para visitarte.</li><li>Te acompañamos hasta el primer servicio con metriiax.</li></ol>
     </div>
     <form class="card" id="quoteForm" novalidate>
       <div class="f"><label for="q-nombre">Tu nombre</label><input id="q-nombre" name="nombre" autocomplete="name"></div>
@@ -598,12 +579,26 @@ body.cur-on #cur,body.cur-on #cur2{opacity:1}
 
 <footer>
   <div class="wrap">
-    <span class="logo">metriax<i></i></span>
+    <span class="logo">metriiax<i></i></span>
     <span>Tarjetas NFC y carta digital para hostelería · Hecho en Extremadura · © 2026</span>
     <nav aria-label="Pie"><a href="#como">Cómo funciona</a><a href="#disenos">Diseños</a><a href="#proceso">Cómo trabajamos</a><a href="#presupuesto">Contacto</a><a href="/acceso/">Acceder</a></nav>
   </div>
 </footer>
 
+<div class="zoom" id="zoom" role="dialog" aria-modal="true" aria-label="Tarjeta en grande">
+  <button class="zx" type="button" id="zoomX" aria-label="Cerrar">×</button>
+  <div class="zc" id="zoomC"><img id="zoomImg" alt=""></div>
+  <div class="zt"><b id="zoomName"></b><small id="zoomSub"></small></div>
+</div>
+<script>
+(function(){var z=document.getElementById('zoom'),c=document.getElementById('zoomC'),img=document.getElementById('zoomImg'),last=null;
+window.mxZoom=function(src,name,sub){last=document.activeElement;img.src=src;img.alt='Tarjeta '+(name||'');document.getElementById('zoomName').textContent=name||'';document.getElementById('zoomSub').textContent=sub||'';z.classList.add('show');document.body.style.overflow='hidden';document.getElementById('zoomX').focus()};
+function cerrar(){z.classList.remove('show');document.body.style.overflow='';c.style.transform='';if(last&&last.focus)last.focus()}
+document.getElementById('zoomX').onclick=cerrar;z.addEventListener('click',function(e){if(e.target===z)cerrar()});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&z.classList.contains('show'))cerrar()});
+if(!matchMedia('(prefers-reduced-motion:reduce)').matches){c.addEventListener('pointermove',function(e){var r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;c.style.transform='rotateY('+x*14+'deg) rotateX('+(-y*14)+'deg)';c.style.setProperty('--gx',(1-(x+.5))*150-25+'%')});c.addEventListener('pointerleave',function(){c.style.transform='';c.style.setProperty('--gx','120%')})}
+})();
+</script>
 <div class="modal" id="login" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
   <div class="box">
     <button class="x" type="button" id="loginClose" aria-label="Cerrar">×</button>
@@ -612,7 +607,7 @@ body.cur-on #cur,body.cur-on #cur2{opacity:1}
     <div class="seg" role="group" aria-label="Tipo de cuenta">
       <button type="button" data-role="dueno" aria-pressed="true">Dueño</button>
       <button type="button" data-role="camarero" aria-pressed="false">Camarero</button>
-      <button type="button" data-role="admin" aria-pressed="false">metriax</button>
+      <button type="button" data-role="admin" aria-pressed="false">metriiax</button>
     </div>
     <form id="loginForm" style="display:flex;flex-direction:column;gap:12px">
       <div class="f"><label for="l-email">Correo</label><input id="l-email" type="email" autocomplete="username" placeholder="tu@correo.com"></div>
@@ -625,7 +620,7 @@ body.cur-on #cur,body.cur-on #cur2{opacity:1}
 
 <div class="app" id="app" aria-label="Panel">
   <aside>
-    <span class="logo">metriax<i></i></span>
+    <span class="logo">metriiax<i></i></span>
     <div class="who-card"><span class="avatar" id="whoAv">C</span><div><strong id="whoName">Carmen</strong><small id="whoSub">Bar La Parada</small></div></div>
     <nav id="appNav" aria-label="Secciones del panel"></nav>
     <div class="foot">
@@ -633,7 +628,7 @@ body.cur-on #cur,body.cur-on #cur2{opacity:1}
       <div class="seg" role="group" aria-label="Rol de la demo">
         <button type="button" data-switch="dueno">Dueño</button>
         <button type="button" data-switch="camarero">Camarero</button>
-        <button type="button" data-switch="admin">metriax</button>
+        <button type="button" data-switch="admin">metriiax</button>
       </div>
       <button class="btn btn-line" type="button" id="logout">Salir a la web</button>
     </div>
@@ -690,7 +685,7 @@ form.addEventListener('submit',function(e){
   if(miss.length){fmsg.textContent='Falta '+miss.join(', ')+'.';fmsg.className='formmsg err';return}
   if(d.email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)){fmsg.textContent='Revisa el correo: parece incompleto.';fmsg.className='formmsg err';return}
   fmsg.textContent='';fmsg.className='formmsg';
-  $('#doneText').textContent='Solicitud de visita · metriax\nNombre: '+d.nombre+'\nLocal: '+d.local+(d.ciudad?' ('+d.ciudad+')':'')+'\nMesas: '+(d.mesas||'sin indicar')+(d.telefono?'\nTeléfono: '+d.telefono:'')+(d.email?'\nCorreo: '+d.email:'')+(d.mensaje?'\nMensaje: '+d.mensaje:'');
+  $('#doneText').textContent='Solicitud de visita · metriiax\nNombre: '+d.nombre+'\nLocal: '+d.local+(d.ciudad?' ('+d.ciudad+')':'')+'\nMesas: '+(d.mesas||'sin indicar')+(d.telefono?'\nTeléfono: '+d.telefono:'')+(d.email?'\nCorreo: '+d.email:'')+(d.mensaje?'\nMensaje: '+d.mensaje:'');
   var asunto='Solicitud de visita · '+d.local+(d.ciudad?' ('+d.ciudad+')':'');
   location.href='mailto:hola@metriiax.com?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent($('#doneText').textContent);
   done.classList.add('show');
@@ -714,7 +709,7 @@ var app=$('#app'),main=$('#appMain'),nav=$('#appNav'),role=null,tab=null,timer=n
 var ROLES={
   dueno:{name:'Carmen',sub:'Dueña · Bar La Parada',av:'C',tabs:[['resumen','Resumen'],['carta','Carta'],['mesas','Mesas']]},
   camarero:{name:'Juan',sub:'Camarero · turno de tarde',av:'J',tabs:[['avisos','Avisos'],['mesas','Mis mesas']]},
-  admin:{name:'Equipo metriax',sub:'Superadmin',av:'M',tabs:[['general','General'],['locales','Locales'],['leads','Solicitudes']]}
+  admin:{name:'Equipo metriiax',sub:'Superadmin',av:'M',tabs:[['general','General'],['locales','Locales'],['leads','Solicitudes']]}
 };
 function go(r){location.hash='panel-'+r}
 function open(r){role=r;tab=ROLES[r].tabs[0][0];var R=ROLES[r];$('#whoName').textContent=R.name;$('#whoSub').textContent=R.sub;$('#whoAv').textContent=R.av;
@@ -964,7 +959,7 @@ function dSal(){const c=cnv(),g=c.getContext('2d');const gr=g.createLinearGradie
 function dHolo(){const c=cnv(),g=c.getContext('2d');const gr=g.createLinearGradient(0,0,TW,TH);gr.addColorStop(0,'#eef1ff');gr.addColorStop(.5,'#ffffff');gr.addColorStop(1,'#e6ecf5');g.fillStyle=gr;g.fillRect(0,0,TW,TH);
   g.strokeStyle='rgba(0,0,0,.07)';g.lineWidth=1;for(let i=0;i<TW;i+=30){g.beginPath();g.moveTo(i,0);g.lineTo(i,TH);g.stroke()}for(let i=0;i<TH;i+=30){g.beginPath();g.moveTo(0,i);g.lineTo(TW,i);g.stroke()}
   g.save();g.translate(TW/2,480);g.strokeStyle='#8e9097';for(let k=1;k<9;k++){g.lineWidth=k%3?1:3;g.beginPath();g.arc(0,0,k*34,0,7);g.stroke()}g.restore();
-  g.fillStyle='#0d1030';g.textAlign='center';g.font='800 120px "Syne"';g.fillText('metriax',TW/2,220);g.fillStyle='#8e9097';g.beginPath();g.arc(TW/2+240,140,14,0,7);g.fill();
+  g.fillStyle='#0d1030';g.textAlign='center';g.font='800 106px "Syne"';g.fillText('metriiax',TW/2,220);g.fillStyle='#8e9097';g.beginPath();g.arc(TW/2+g.measureText('metriiax').width/2+16,148,13,0,7);g.fill();
   g.font='700 22px "JetBrains Mono"';g.fillStyle='#0d1030';sp(g,'EDICIÓN HOLOGRÁFICA',TW/2,280,6);
   waves(g,TW/2+40,480,120,'#0d1030',16);
   g.fillStyle='#0d1030';g.font='800 46px "Syne"';g.fillText('Acerca tu móvil',TW/2,860);
@@ -974,7 +969,7 @@ function dHolo(){const c=cnv(),g=c.getContext('2d');const gr=g.createLinearGradi
 function dBack(){const c=cnv(),g=c.getContext('2d');const gr=g.createLinearGradient(0,0,0,TH);gr.addColorStop(0,'#2c2c2e');gr.addColorStop(1,'#050505');g.fillStyle=gr;g.fillRect(0,0,TW,TH);
   const sv=g.createLinearGradient(0,60,0,240);sv.addColorStop(0,'#ffffff');sv.addColorStop(.5,'#c7c9cf');sv.addColorStop(.55,'#f4f4f6');sv.addColorStop(1,'#8e9097');
   g.strokeStyle='rgba(255,255,255,.06)';g.lineWidth=2;for(let k=1;k<12;k++){g.beginPath();g.arc(TW/2,TH*.55,k*60,0,7);g.stroke()}
-  g.fillStyle=sv;g.textAlign='center';g.font='800 112px "Syne"';g.fillText('metriax',TW/2,210);g.beginPath();g.arc(TW/2+232,128,13,0,7);g.fill();
+  g.fillStyle=sv;g.textAlign='center';g.font='800 98px "Syne"';g.fillText('metriiax',TW/2,210);g.beginPath();g.arc(TW/2+g.measureText('metriiax').width/2+15,138,12,0,7);g.fill();
   const q=21,m=14,ox=TW/2-q*m/2,oy=320;g.fillStyle='#f4efe3';rr(g,ox-26,oy-26,q*m+52,q*m+52,18);g.fill();const r=seeded(7);g.fillStyle='#0d1030';
   for(let y=0;y<q;y++)for(let x=0;x<q;x++){const f=(x<7&&y<7)||(x>13&&y<7)||(x<7&&y>13);if(f){const fx=x<7?0:14,fy=y<7?0:14,dx=x-fx,dy=y-fy;if(dx===0||dx===6||dy===0||dy===6||(dx>1&&dx<5&&dy>1&&dy<5))g.fillRect(ox+x*m,oy+y*m,m,m)}else if(r()<.48)g.fillRect(ox+x*m,oy+y*m,m,m)}
   g.fillStyle='#f4efe3';g.font='800 44px "Syne"';g.fillText('Acerca tu móvil',TW/2,790);g.fillStyle='rgba(244,239,227,.75)';g.font='500 28px "Instrument Sans"';g.fillText('o escanea el código',TW/2,836);
@@ -982,7 +977,7 @@ function dBack(){const c=cnv(),g=c.getContext('2d');const gr=g.createLinearGradi
 
 const DESIGNS=[
   {id:'parada',name:'Bar La Parada',sub:'Almendralejo · cliente real',tag:'Ilustrada a mano',sw:'#c8312b'},
-  {id:'holo',name:'metriax Holo',sub:'Edición holográfica',tag:'Holográfica',sw:'linear-gradient(135deg,#9ff,#f9f,#ff9)',draw:dHolo,mat:'holo'},
+  {id:'holo',name:'metriiax Holo',sub:'Edición holográfica',tag:'Holográfica',sw:'linear-gradient(135deg,#9ff,#f9f,#ff9)',draw:dHolo,mat:'holo'},
   {id:'gatos',name:'Los Cuatro Gatos',sub:'Vermutería · diseño de muestra',tag:'Art déco dorado',sw:'#b98c2f',draw:dGatos,mat:'gold'},
   {id:'espuma',name:'Cervecería La Espuma',sub:'Diseño de muestra',tag:'Pop',sw:'#ffc21a',draw:dEspuma},
   {id:'bodega',name:'Bodega Tierra de Barros',sub:'Diseño de muestra',tag:'Grabado',sw:'#6b1628',draw:dBodega},
@@ -1004,10 +999,11 @@ const photo=await new Promise(res=>{const im=new Image();im.onload=()=>res(im);i
 if(photo){const c=cnv(),g=c.getContext('2d');g.drawImage(photo,0,0,TW,TH);DESIGNS[0].canvas=c}else DESIGNS[0].canvas=dCandil();
 
 /* ---------- galería (imágenes planas, en tiempo libre) ---------- */
-(function gallery(){const gal=document.getElementById('gal');const run=()=>{DESIGNS.forEach(d=>{const s=cnv(270,428);s.getContext('2d').drawImage(d.canvas,0,0,270,428);
+(function gallery(){const gal=document.getElementById('gal');const run=()=>{DESIGNS.slice(0,8).forEach(d=>{const s=cnv(270,428);s.getContext('2d').drawImage(d.canvas,0,0,270,428);
   const el=document.createElement('div');el.className='gcard';el.innerHTML='<div class="pic"><img alt="Tarjeta '+d.name+'" width="270" height="428"></div><b></b><small></small>';
   el.querySelector('img').src=s.toDataURL('image/jpeg',.86);el.querySelector('b').textContent=d.name;el.querySelector('small').textContent=d.tag;
   const pic=el.querySelector('.pic');if(!reduce){pic.addEventListener('pointermove',e=>{const r=pic.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;pic.style.transform=`rotateY(${x*18}deg) rotateX(${-y*18}deg) translateZ(10px)`;pic.style.setProperty('--gx',(1-(x+.5))*150-25+'%')});pic.addEventListener('pointerleave',()=>{pic.style.transform='';pic.style.setProperty('--gx','120%')})}
+  const oc=d.canvas,on=d.name,ot=d.tag;pic.addEventListener('click',()=>mxZoom(oc.toDataURL('image/jpeg',.92),on,ot));pic.setAttribute('role','button');pic.tabIndex=0;pic.setAttribute('aria-label','Ver '+d.name+' en grande');pic.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pic.click()}});
   gal.appendChild(el)});document.dispatchEvent(new Event('mx-gallery'))};window.requestIdleCallback?requestIdleCallback(run,{timeout:1200}):setTimeout(run,300)})();
 
 
@@ -1133,9 +1129,9 @@ function loop(renderer,host,frame){let vis=false,acc=0,n=0,ratio=renderer.getPix
   const nm=document.getElementById('nowName'),nsub=document.getElementById('nowSub'),nsw=document.getElementById('nowSw'),ncount=document.getElementById('nowCount');
   let shownIdx=-1;function label(i){if(i===shownIdx)return;shownIdx=i;const d=DESIGNS[i];nm.textContent=d.name;nsub.textContent=d.sub;nsw.style.background=d.sw;ncount.textContent=String(i+1).padStart(2,'0')+' / '+String(N).padStart(2,'0')}
   function goTo(n){k=n;target=-k*slot;hold=clock+6}
-  document.getElementById('nextBtn').onclick=()=>goTo(k+1);document.getElementById('prevBtn').onclick=()=>goTo(k-1);
+  document.getElementById('nextBtn').onclick=()=>goTo(k+1);document.getElementById('zoomBtn').onclick=()=>{const d=DESIGNS[((k%N)+N)%N];hold=clock+15;mxZoom(d.canvas.toDataURL('image/jpeg',.92),d.name,d.sub)};document.getElementById('prevBtn').onclick=()=>goTo(k-1);
   function useFile(f){if(!f||!/^image\//.test(f.type))return;const im=new Image();im.onload=()=>{const c=cnv(),g=c.getContext('2d');const s=Math.max(TW/im.width,TH/im.height);g.drawImage(im,(TW-im.width*s)/2,(TH-im.height*s)/2,im.width*s,im.height*s);
-    const i=((k%N)+N)%N,d=DESIGNS[i];d.fmat.map=tex(renderer,c);d.fmat.needsUpdate=true;d.name='Tu diseño';d.sub='Solo se ve en tu navegador';d.sw='#d7d8dc';shownIdx=-1;hold=clock+15;URL.revokeObjectURL(im.src)};im.src=URL.createObjectURL(f)}
+    const i=((k%N)+N)%N,d=DESIGNS[i];d.fmat.map=tex(renderer,c);d.fmat.needsUpdate=true;d.canvas=c;d.name='Tu diseño';d.sub='Solo se ve en tu navegador';d.sw='#d7d8dc';shownIdx=-1;hold=clock+15;URL.revokeObjectURL(im.src);window.mxZoom&&mxZoom(c.toDataURL('image/jpeg',.92),d.name,d.sub)};im.src=URL.createObjectURL(f)}
   document.getElementById('upFile').addEventListener('change',e=>{useFile(e.target.files[0]);e.target.value=''});
   let depth=0;const isF=e=>e.dataTransfer&&[...e.dataTransfer.types].includes('Files');
   host.addEventListener('dragenter',e=>{if(isF(e)){e.preventDefault();depth++;host.classList.add('over')}});host.addEventListener('dragover',e=>{if(isF(e))e.preventDefault()});

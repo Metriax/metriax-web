@@ -1,25 +1,33 @@
-@font-face{font-family:"Archivo";src:url(/fonts/archivo.woff2) format("woff2");font-weight:100 900;font-display:swap}
-:root{--cal:#DEE0DD;--cara:#EEF0ED;--pizarra:#1C2124;--pizarra-2:#2A3236;--granate:#962B23;--granate-hondo:#561510;--ocre:#B98128}
+@font-face{font-family:"Syne";src:url(/fonts/syne.woff2) format("woff2");font-weight:400 800;font-display:swap}
+@font-face{font-family:"Instrument Sans";src:url(/fonts/instrument-sans.woff2) format("woff2");font-weight:400 700;font-display:swap}
+:root{--bg:#f5f5f7;--ink:#1d1d1f;--gray:#6e6e73;--line:rgba(0,0,0,.1);--silver:linear-gradient(180deg,#fff 0%,#d7d8dc 45%,#f4f4f6 55%,#a7a9b0 100%);
+  --shadow:0 1px 1px rgba(0,0,0,.04),0 12px 32px -12px rgba(0,0,0,.18),0 40px 80px -40px rgba(0,0,0,.25);
+  --body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Instrument Sans","Helvetica Neue",sans-serif;--display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Instrument Sans","Helvetica Neue",sans-serif}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--pizarra);color:var(--pizarra);font:400 17px/1.5 "Archivo",system-ui,sans-serif;padding:24px}
-.caja{width:100%;max-width:440px;background:var(--cara);padding:36px 32px}
-.marca{display:inline-flex;align-items:center;gap:10px;font-weight:800;font-size:20px;color:var(--pizarra);text-decoration:none}
-.marca svg{width:28px;height:28px;color:var(--pizarra)}
-h1{font-size:40px;line-height:1.05;margin:28px 0 6px;font-weight:800;letter-spacing:-.02em}
-.sub{margin:0 0 24px;color:var(--pizarra-2)}
+body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px;background:radial-gradient(70% 60% at 50% 0%,#fff 0%,rgba(255,255,255,0) 70%),var(--bg);color:var(--ink);font:400 17px/1.5 var(--body);letter-spacing:-.01em;-webkit-font-smoothing:antialiased}
+.caja{width:100%;max-width:440px;background:rgba(255,255,255,.72);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border:1px solid rgba(255,255,255,.8);border-radius:28px;box-shadow:var(--shadow);padding:40px 36px}
+.marca{display:inline-flex;align-items:baseline;gap:2px;font-family:"Syne",var(--display);font-weight:800;font-size:26px;letter-spacing:-.05em;color:var(--ink);text-decoration:none}
+.marca i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--silver);box-shadow:0 0 0 1px rgba(0,0,0,.25);transform:translateY(-13px)}
+.ojo{margin:32px 0 6px;font-size:14px;font-weight:600;color:var(--gray)}
+h1{font-family:var(--display);font-size:44px;line-height:1.02;margin:0 0 8px;font-weight:700;letter-spacing:-.045em;background:linear-gradient(180deg,#8e8e93 0%,#1d1d1f 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{margin:0 0 28px;color:var(--gray)}
 form{display:grid;gap:16px}
-label{display:grid;gap:6px;font-weight:650;font-size:15px}
-label small{font-weight:400;color:var(--pizarra-2)}
-input{font:inherit;padding:12px 14px;border:1px solid #b9bdb8;background:#fff;border-radius:0;min-height:48px}
-input:focus{outline:3px solid var(--ocre);outline-offset:0;border-color:var(--pizarra)}
-.btn{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 24px;border:0;border-radius:0;font:650 17px/1 "Archivo",system-ui,sans-serif;cursor:pointer;background:var(--granate);color:#fff;text-decoration:none;width:100%}
-.btn:hover{background:var(--granate-hondo)} .btn[disabled]{opacity:.6;cursor:wait}
-.btn.lin{background:transparent;color:var(--pizarra);border:1px solid var(--pizarra);margin-top:12px}
-.btn.lin:hover{background:var(--cal)}
+label{display:grid;gap:6px;font-weight:600;font-size:14px;color:var(--ink)}
+label small{font-weight:400;color:var(--gray)}
+input{font:inherit;font-size:16px;padding:12px 16px;border:1px solid var(--line);background:#fff;border-radius:14px;min-height:50px;color:var(--ink);transition:border-color .2s,box-shadow .2s}
+input::placeholder{color:#a1a1a6}
+input:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 4px rgba(0,0,0,.08)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 24px;border:0;border-radius:999px;font:600 16px/1 var(--body);cursor:pointer;background:var(--ink);color:#fff;text-decoration:none;width:100%;box-shadow:0 8px 20px -8px rgba(0,0,0,.45);transition:transform .2s,background .2s}
+.btn:hover{background:#000;transform:translateY(-1px)} .btn[disabled]{opacity:.6;cursor:wait;transform:none}
+.btn.lin{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none;margin-top:12px}
+.btn.lin:hover{background:var(--bg)}
 .destinos{display:grid;gap:10px;margin:14px 0}
-.error{margin:0;color:#b3261e;font-weight:600}
-.pie{margin:28px 0 0;font-size:15px;color:var(--pizarra-2)}
-.pie a{color:var(--granate)}
-.enlace{background:none;border:0;padding:4px 0;font:inherit;font-size:15px;color:var(--granate);text-decoration:underline;cursor:pointer;justify-self:start}
-.aviso{margin:0;color:#1f5f3a;font-weight:600}
+.error{margin:0;color:#e0403a;font-weight:600;font-size:15px}
+.pie{margin:28px 0 0;padding-top:20px;border-top:1px solid var(--line);font-size:14px;color:var(--gray)}
+.pie a{color:var(--ink);font-weight:600;text-decoration:none}.pie a:hover{text-decoration:underline}
+.enlace{background:none;border:0;padding:4px 0;font:inherit;font-size:14px;color:var(--gray);text-decoration:underline;text-underline-offset:3px;cursor:pointer;justify-self:center}
+.enlace:hover{color:var(--ink)}
+.aviso{margin:0;color:#1f9d63;font-weight:600;font-size:15px}
+#sesion p{margin:0}
 [hidden]{display:none!important}
+@media (max-width:480px){.caja{padding:32px 22px;border-radius:24px}h1{font-size:38px}}

@@ -4,7 +4,7 @@
   const SUPA_URL = "https://nchhioxmgrdngrzkxzza.supabase.co";
   const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jaGhpb3htZ3Jkbmdyemt4enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUwOTgwMDEsImV4cCI6MjExMDY3NDAwMX0.e4X335EXPQ47LscEdBz01e6e-z8p00vF7r0_WndF9ek"; // clave pública (anon): las reglas de la base de datos protegen los datos
   const PANTALLA = { super:"admin", dueno:"panel", sala:"camarero", cocina:"cocina" };
-  const NOMBRE = { super:"Panel de administración de Metriax", dueno:"Panel del restaurante", sala:"Pantalla de sala", cocina:"Pantalla de cocina" };
+  const NOMBRE = { super:"Panel de administración de metriiax", dueno:"Panel del restaurante", sala:"Pantalla de sala", cocina:"Pantalla de cocina" };
   const PARADO = { suspendido:"El servicio de este restaurante está suspendido. Escríbenos a hola@metriiax.com.", baja:"Este restaurante está dado de baja. Escríbenos a hola@metriiax.com." };
   const $ = id => document.getElementById(id);
   const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, { auth:{ persistSession:true, autoRefreshToken:true, storageKey:"metriax-auth" } });
@@ -37,7 +37,7 @@
     if(auto && usables.length===1 && d.lista.length===1) return ir(usables[0].slug, usables[0].rol);
     $("quien").textContent = d.user.email.endsWith("@metriax.app") ? d.user.email.split(".")[0] : d.user.email;
     const cont = $("destinos"); cont.textContent="";
-    if(!d.lista.length){ const p=document.createElement("p"); p.className="error"; p.textContent="Tu cuenta no tiene ningún restaurante asignado. Pídeselo al dueño o a Metriax."; cont.append(p); }
+    if(!d.lista.length){ const p=document.createElement("p"); p.className="error"; p.textContent="Tu cuenta no tiene ningún restaurante asignado. Pídeselo al dueño o a metriiax."; cont.append(p); }
     for(const x of d.lista){
       if(PARADO[x.estado]){ const p=document.createElement("p"); p.className="error"; p.textContent=x.slug+": "+PARADO[x.estado]; cont.append(p); continue; }
       const b=document.createElement("button"); b.type="button"; b.className="btn"; b.textContent=x.texto;
