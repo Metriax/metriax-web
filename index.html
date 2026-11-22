@@ -157,7 +157,8 @@ section{scroll-margin-top:64px}
 }
 
 /* GALLERY */
-.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:26px 18px;perspective:1200px}
+.gal{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:36px 28px;perspective:1200px;max-width:980px;margin-inline:auto}
+@media (max-width:760px){.gal{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 14px}}
 .gcard{display:flex;flex-direction:column;gap:10px}
 .gcard .pic{aspect-ratio:54/85.6;border-radius:12px;overflow:hidden;background:#ddd;box-shadow:0 2px 4px rgba(0,0,0,.06),0 24px 40px -18px rgba(0,0,0,.35);transform-style:preserve-3d;transition:transform .25s ease,box-shadow .25s ease;position:relative}
 .gcard .pic:hover{box-shadow:0 2px 4px rgba(0,0,0,.06),0 40px 60px -24px rgba(0,0,0,.45)}

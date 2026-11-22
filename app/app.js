@@ -285,8 +285,8 @@ const SUPA_URL = "https://nchhioxmgrdngrzkxzza.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jaGhpb3htZ3Jkbmdyemt4enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUwOTgwMDEsImV4cCI6MjExMDY3NDAwMX0.e4X335EXPQ47LscEdBz01e6e-z8p00vF7r0_WndF9ek";
 // Rol de la cuenta en este restaurante (dueño, sala, cocina o super) y camarero que es
 async function leerRol(){
-  Store.rol=null; Store.cam=null; if(!Store.sesion||!Store.sb) return;
-  try{ const {data,error}=await Store.sb.rpc("mi_ficha",{p_tenant:TENANT}); if(!error&&data){ Store.rol=data.rol||null; Store.cam=data.cam||null; } }catch(e){}
+  Store.rol=null; Store.cam=null; Store.estado=null; if(!Store.sesion||!Store.sb) return;
+  try{ const {data,error}=await Store.sb.rpc("mi_ficha",{p_tenant:TENANT}); if(!error&&data){ Store.rol=data.rol||null; Store.cam=data.cam||null; Store.estado=data.estado||null; } }catch(e){}
 }
 async function conectarSupabase(){
   if(!window.supabase || SUPA_URL.startsWith("__")) return false;
@@ -300,7 +300,7 @@ async function conectarSupabase(){
       data.forEach(r=>{ if(m[r.col]) m[r.col].set(r.id,r.data); }); if(data.length<1000) break; desde+=1000; }
     // El cliente sin cuenta no puede leer pedidos: conserva los que ha traído su propia pantalla
     if(Store.publico()) Store.data.pedidos.forEach((v,k)=>m.pedidos.set(k,v));
-    COLS.forEach(c=>Store.data[c]=m[c]); Store.emit();
+    COLS.forEach(c=>Store.data[c]=m[c]); Store.cerrado = !(Store.sesion && Store.rol) && m.config.size===0; Store.emit();
     // Primera vez que entra un administrador: guarda la carta de la plantilla en la base de datos (así sala puede marcar agotados)
     if(Store.sesion && ["dueno","super"].includes(Store.rol) && !m.config.has("carta")) setTimeout(()=>{ if(Store.modo==="supa") Acc.carta({}).catch?.(()=>{}); },0); };
   Store.recargar=cargar;
@@ -1292,6 +1292,9 @@ function ir(){
   let r=ruta(); const ac=acceso(r);
   if(ac==="login") r={v:"login",destino:r.v}; else if(ac==="rol") r={v:"sinacceso",destino:r.v}; else if(ac==="pin") r={v:"pin",destino:r.v}; else if(ac==="local") r={v:"local",destino:r.v};
   const clave=JSON.stringify(r);
+  if(Store.cerrado && ["inicio","carta","mesa","llevar","seguir","reservar","reserva","recogida"].includes(r.v)){
+    vista && vista.salir && vista.salir(); vista={clave:"cerrado"}; document.documentElement.classList.add("cliente"); document.body.dataset.v="cerrado"; document.title="Carta no disponible";
+    app.innerHTML=`<div class="app-mesa"><div class="m-cuerpo" style="align-content:center;text-align:center;min-height:80vh"><p class="m-hola">${LG("Esta carta no está disponible","This menu isn't available","Este menu não está disponível")}</p><p class="m-texto">${LG("Pide la carta al personal del local.","Please ask the staff for the menu.","Peça o menu ao pessoal.")}</p></div></div>`; return; }
   if(vista && vista.clave===clave) return;
   vista && vista.salir && vista.salir(); Comanda.cerrar();
   document.documentElement.classList.toggle("staff", ["camarero","panel","admin","sinacceso","pin","local"].includes(r.v));
@@ -1418,7 +1421,7 @@ function VSinAcceso({destino}){
   return { titulo:"Sin acceso · "+cfgBar().nombre, pintar(){
     app.innerHTML=`<div class="app-mesa" style="justify-content:center"><div class="m-cuerpo" style="max-width:440px;margin:0 auto;width:100%;align-content:center;text-align:center">
       ${logoHTML("login-logo")}
-      <p class="m-hola">Tu cuenta no tiene acceso a ${nombres[destino]||"esta pantalla"}</p>
+      ${["suspendido","baja"].includes(Store.estado)?`<p class="m-hola">El servicio de ${esc(cfgBar().nombre)} está ${Store.estado==="baja"?"dado de baja":"suspendido"}</p><p class="m-texto">Para volver a usarlo, escribe a <a href="mailto:hola@metriiax.com">hola@metriiax.com</a>.</p>`:`<p class="m-hola">Tu cuenta no tiene acceso a ${nombres[destino]||"esta pantalla"}</p>`}
       <p class="m-texto">Has entrado como ${esc(Store.sesion?.user?.email||"")}${Store.rol?` (${({dueno:"dueño",sala:"sala",cocina:"cocina",super:"super-admin"})[Store.rol]})`:", sin permisos en este restaurante"}. Pide acceso al dueño o a soporte.</p>
       <button class="btn rojo" data-salir>Entrar con otra cuenta</button>
       <a class="btn peq" href="#inicio">${ico("back")}Volver</a>
@@ -3048,6 +3051,12 @@ const Maestro = {
     await this.escribir(slug,"config","menu",menu||{...MENU_DEF,activo:origen==="ejemplo"});
     for(let n=1;n<=mesas;n++) await this.escribir(slug,"nfc",n,{n,token:tokenNuevo()});
   },
+  async estado(slug,estado,nota){
+    const activo=estado==="activo"||estado==="aviso";
+    if(Store.modo==="supa"){ const {error}=await Store.sb.rpc("cambiar_estado",{p_slug:slug,p_estado:estado,p_nota:nota||""}); if(error) throw error; }
+    else Local.guardarRegistro(Local.registro().map(r=>r.slug===slug?{...r,activo,estado}:r));
+    const bar=(await this.leer(slug,"config")).bar||{...BAR_DEF}; await this.escribir(slug,"config","bar",{...bar,activo});
+  },
   async activar(slug,activo){
     if(Store.modo==="supa"){ const {error}=await Store.sb.from("restaurantes").update({activo}).eq("slug",slug); if(error) throw error; }
     else Local.guardarRegistro(Local.registro().map(r=>r.slug===slug?{...r,activo}:r));
@@ -3088,22 +3097,26 @@ function VAdmin(){
       </div>
       <div class="tabla-wrap"><table class="datos"><thead><tr><th>Restaurante</th><th>Estado</th><th>Plan</th><th style="text-align:right">Mesas abiertas</th><th style="text-align:right">Pedidos hoy</th><th>Actividad</th><th>Acciones</th></tr></thead><tbody>
       ${lista.map(r=>`<tr><td><b>${esc(r.nombre)}</b><br><code style="font-size:12px;color:var(--tinta-3)">${esc(r.slug)}</code>${r.slug===TENANT?` <span class="pill" style="font-size:11px">este</span>`:""}</td>
-        <td>${r.activo?`<span class="pill ok">Activo</span>`:`<span class="pill critico">Pausado</span>`}</td><td>${esc(r.plan||"demo")}</td>
+        <td>${estadoPill(r)}</td><td>${esc(r.plan||"demo")}</td>
         <td style="text-align:right">${+r.mesas_abiertas||0}</td><td style="text-align:right">${+r.pedidos_hoy||0}${+r.entrantes?` <span class="pill aviso" style="font-size:11px">${r.entrantes} por confirmar</span>`:""}</td><td>${hace(r.ultima)}</td>
         <td><div class="acc-fila"><a class="b-ui peq-ui" href="${esc(enlace(r.slug,"#panel"))}">Panel</a><a class="b-ui claro peq-ui" href="${esc(enlace(r.slug,"#carta"))}">Carta</a><a class="b-ui claro peq-ui" href="${esc(enlace(r.slug,"#camarero"))}">Sala</a>
           <button class="b-ui claro peq-ui" data-chat="${esc(r.slug)}">Chat${+r.chat_sin_leer?` <span class="b">${r.chat_sin_leer}</span>`:""}</button><button class="b-ui claro peq-ui" data-ficha="${esc(r.slug)}">Ficha</button></div></td></tr>`).join("")||`<tr><td colspan="7">No hay restaurantes todavía.</td></tr>`}
       </tbody></table></div>
       ${Store.modo!=="supa"?`<p class="ayuda" style="margin-top:10px">Modo demo: estos restaurantes viven en este navegador. Con la base de datos conectada verás todos tus clientes reales.</p>`:""}`;
   }
+  function estadoDe(r){ return r.estado||(r.activo?"activo":"suspendido"); }
+  function estadoPill(r){ const e=estadoDe(r); const m={activo:["ok","Activo"],aviso:["aviso","Aviso de pago"],suspendido:["critico","Suspendido"],baja:["critico","De baja"]}[e]||["ok",e]; return `<span class="pill ${m[0]}">${m[1]}</span>`; }
   function fichaV(){
     const r=(lista||[]).find(x=>x.slug===sel); if(!r) return `<p class="vacio-ui">Elige un restaurante.</p>`;
     if(Store.modo==="supa" && equipo===null){ equipo=[]; Store.sb.rpc("equipo",{p_tenant:sel}).then(({data})=>{ equipo=data||[]; pintar(true); }); }
-    return `<div class="p-cab"><div><h1>${esc(r.nombre)}</h1><p><code>${esc(r.slug)}</code> · ${r.activo?"activo":"pausado"}</p></div><button class="b-ui claro" data-atab="restaurantes">${ico("back")}Volver</button></div>
+    return `<div class="p-cab"><div><h1>${esc(r.nombre)}</h1><p><code>${esc(r.slug)}</code> · ${estadoPill(r)}${r.estado_desde?` <small style="color:var(--tinta-3)">desde ${new Date(r.estado_desde).toLocaleDateString("es-ES")}</small>`:""}</p></div><button class="b-ui claro" data-atab="restaurantes">${ico("back")}Volver</button></div>
       <div class="rej">
         <div class="card c6"><h2>Entrar a ayudar</h2><p class="ayuda">Tienes acceso completo: lo que cambies se aplica al momento en su local.</p>
           <div class="acc-fila"><a class="b-ui" href="${esc(enlace(r.slug,"#panel"))}">Panel del dueño</a><a class="b-ui claro" href="${esc(enlace(r.slug,"#camarero"))}">Sala</a><a class="b-ui claro" href="${esc(enlace(r.slug,"#cocina"))}">Cocina</a><a class="b-ui claro" href="${esc(enlace(r.slug,"#barra"))}">Barra</a><a class="b-ui claro" href="${esc(enlace(r.slug,"#carta"))}">Carta pública</a></div></div>
-        <div class="card c6"><h2>Servicio</h2><p class="ayuda">Pausado: los clientes no pueden pedir y la carta deja de mostrarse en las mesas.</p>
-          <button class="b-ui ${r.activo?"claro":"verde"}" data-activar="${esc(r.slug)}" data-valor="${r.activo?0:1}">${r.activo?"Pausar el servicio":"Reactivar el servicio"}</button></div>
+        <div class="card c6"><h2>Estado del cliente</h2>
+          <p class="ayuda"><b>Activo</b>: todo funciona. <b>Aviso de pago</b>: sigue funcionando y queda marcado como pendiente de pago. <b>Suspendido</b> (impago): corte total, ni el personal entra ni los clientes pueden pedir; se reactiva cuando quieras. <b>De baja</b> (no renueva): igual que suspendido, pero marcado como cliente perdido. Sus datos se conservan.</p>
+          <label style="display:grid;gap:4px;margin:8px 0;font-size:14px;font-weight:600">Motivo (queda anotado)<input id="fi-motivo" maxlength="200" placeholder="por ejemplo: impago de noviembre"></label>
+          <div class="acc-fila">${[["activo","Activo","verde"],["aviso","Aviso de pago","claro"],["suspendido","Suspender","claro"],["baja","Dar de baja","claro"]].map(([k,t,c])=>`<button class="b-ui ${estadoDe(r)===k?"":c}" data-estado="${k}" data-slug="${esc(r.slug)}" aria-pressed="${estadoDe(r)===k}" ${estadoDe(r)===k?"disabled":""}>${t}</button>`).join("")}</div></div>
         <form class="card c6" id="f-ficha"><h2>Ficha interna</h2><div class="form-aj" style="grid-template-columns:1fr"><label>Plan<select id="fi-plan">${["demo","prueba","basico","pro"].map(p=>`<option ${r.plan===p?"selected":""}>${p}</option>`).join("")}</select></label><label>Notas<textarea id="fi-notas" maxlength="1000">${esc(r.notas||"")}</textarea></label><div><button class="b-ui rojo" type="submit">Guardar</button></div></div></form>
         <div class="card c6"><h2>Equipo</h2>${Store.modo!=="supa"?`<p class="ayuda">En modo demo no hay cuentas. Con la base de datos conectada, aquí das acceso al dueño y al personal.</p>`
           :`${equipo&&equipo.length?`<ul class="opiniones">${equipo.map(x=>`<li><b>${esc(x.email)}</b><span>${ROLES[x.rol]||x.rol}</span></li>`).join("")}</ul>`:`<p class="ayuda">Nadie con acceso todavía.</p>`}
@@ -3156,6 +3169,9 @@ function VAdmin(){
     const tb=t.closest("[data-atab]"); if(tb){ tab=tb.dataset.atab; if(tab!=="nuevo") creado=null; pintar(true); return window.scrollTo(0,0); }
     const ch=t.closest("[data-chat]"); if(ch) return abrirChat(ch.dataset.chat);
     const fi=t.closest("[data-ficha]"); if(fi){ sel=fi.dataset.ficha; equipo=null; tab="ficha"; return pintar(true); }
+    const es=t.closest("[data-estado]"); if(es){ const k=es.dataset.estado, nom={activo:"activo",aviso:"aviso de pago",suspendido:"suspendido",baja:"de baja"}[k];
+      if((k==="suspendido"||k==="baja") && !confirm(`¿Seguro? ${es.dataset.slug} quedará ${nom}: su personal no podrá entrar y los clientes no podrán pedir.`)) return;
+      try{ await Maestro.estado(es.dataset.slug,k,(app.querySelector("#fi-motivo")||{}).value||""); toast(`Estado cambiado: ${nom}.`); }catch(_){ toast("No se ha podido cambiar el estado."); } return cargar(); }
     const ac=t.closest("[data-activar]"); if(ac){ try{ await Maestro.activar(ac.dataset.activar,ac.dataset.valor==="1"); toast(ac.dataset.valor==="1"?"Servicio reactivado.":"Servicio pausado: no se aceptan pedidos."); }catch(_){ toast("No se ha podido cambiar."); } return cargar(); }
   }
   function cambio(e){ if(e.target.id==="nr-nombre"){ const s=app.querySelector("#nr-slug"); if(s && !s.dataset.tocado) s.value=slugDe(e.target.value); } if(e.target.id==="nr-slug") e.target.dataset.tocado=1; }
