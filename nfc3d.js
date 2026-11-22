@@ -72,8 +72,8 @@ async function iniciar() {
   poner(0);
 
   function medir() { const w = caja.clientWidth, h = caja.clientHeight; if (!w || !h) return; r.setSize(w, h, false); cam.aspect = w / h;
-    const ajuste = Math.max(1, (W * 1.25) / (2 * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * cam.aspect * 230));
-    cam.position.z = 230 * Math.max(ajuste, 1); cam.updateProjectionMatrix(); }
+    const k = 2 * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
+    cam.position.z = Math.max((H * 1.42) / k, (W * 1.18) / (k * cam.aspect)); cam.updateProjectionMatrix(); }
   addEventListener("resize", medir); medir();
 
   const lento = matchMedia("(prefers-reduced-motion: reduce)").matches;
