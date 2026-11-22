@@ -459,9 +459,122 @@ body{background:#101417}
 .sobre .panel{min-height:0}
 @media (max-width:1000px){.sobre .lobulo,.sobre .textos,.sobre h2{grid-column:1 / -1;grid-row:auto}}
 .sobre .lobulo{overflow:hidden}
+/* ================= MODO CLARO TECH-ELEGANTE (solo estética) ================= */
+:root{--z950:#09090B;--z900:#18181B;--z800:#27272A;--z600:#52525B;--z500:#71717A;--z300:#D4D4D8;--z200:#E4E4E7;--z100:#F4F4F5;--z50:#F9FAFB;
+  --sombra:0 1px 2px rgba(0,0,0,.04),0 2px 12px rgba(0,0,0,.04);--sombra-h:0 4px 6px -1px rgba(0,0,0,.06),0 12px 28px -6px rgba(0,0,0,.10);
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;--sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif}
+body{background:#fff !important;color:var(--z950);font-family:var(--sans) !important;font-feature-settings:"cv11","ss01"}
+::selection{background:var(--z950);color:#fff}
+.d{font-family:var(--sans) !important;font-stretch:normal !important;font-weight:700 !important;letter-spacing:-.045em !important;line-height:.95 !important}
+.btn{border-radius:10px !important;font-family:var(--sans) !important;font-weight:600 !important;background:var(--z950) !important;color:#fff !important;transition:background .2s ease,box-shadow .2s ease,transform .2s ease !important}
+.btn:hover{background:var(--z800) !important}
+.btn.lin{background:#fff !important;color:var(--z900) !important;box-shadow:inset 0 0 0 1px var(--z200) !important}.btn.lin:hover{background:var(--z50) !important}
+.p-kicker{color:var(--z500) !important;font-family:var(--mono) !important;font-weight:500 !important;letter-spacing:.12em !important}
+.p-kicker::before{background:var(--z300) !important}
+/* navbar cristal */
+.cab{background:rgba(255,255,255,.8) !important;-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid rgba(228,228,231,.8);color:var(--z950) !important}
+.cab nav a{color:var(--z600)}.cab nav a:hover{color:var(--z950)}
+.cab .btn{background:var(--z950) !important;color:#fff !important}
+.cab .marca svg{color:var(--z950)}
+/* portada */
+.portada{background:#fff !important;color:var(--z950) !important}
+.p-fondo{background:radial-gradient(60% 55% at 72% 42%,rgba(244,244,245,1) 0%,rgba(255,255,255,0) 70%),radial-gradient(#E4E4E7 1px,transparent 1px) 0 0/22px 22px,#fff !important;-webkit-mask-image:linear-gradient(180deg,#000 70%,transparent);mask-image:linear-gradient(180deg,#000 70%,transparent)}
+.p-fondo::before{display:none}
+.p-fondo::after{background:linear-gradient(90deg,transparent,var(--z200),transparent) !important}
+.portada .titular{color:var(--z950) !important}
+.portada .titular .arriba span+span{background:linear-gradient(100deg,#09090B 0%,#52525B 55%,#A1A1AA 100%) !important;-webkit-background-clip:text !important;background-clip:text !important}
+.portada .bajada{color:var(--z600) !important}
+.portada .acc .btn.lin{background:#fff !important;color:var(--z900) !important;box-shadow:inset 0 0 0 1px var(--z200) !important}
+.portada .nfc3d::before{background:radial-gradient(closest-side,rgba(228,228,231,.9),rgba(255,255,255,0)) !important;filter:blur(18px)}
+.portada .nfc3d::after{content:"";position:absolute;left:50%;bottom:4%;width:46%;height:22px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(9,9,11,.22),rgba(9,9,11,0));filter:blur(6px);animation:sombraNfc 3.4s ease-in-out infinite}
+@keyframes sombraNfc{50%{transform:translateX(-50%) scaleX(.86);opacity:.75}}
+/* recorrido del vídeo: el vídeo sigue mandando; solo acabados */
+.recorrido{background:var(--z950) !important}
+.rec-kicker{font-family:var(--mono) !important;color:#D4D4D8 !important;letter-spacing:.12em}
+.rec-pasos .n{background:#fff !important;color:var(--z950) !important;border-radius:8px;font-family:var(--mono) !important}
+.rec-barra i{background:#fff !important}
+/* pantallas */
+.pantallas{background:var(--z50) !important;color:var(--z950) !important}
+.sec-cab h2,.c-izq h2{color:var(--z950) !important}
+.b-tile{background:#fff !important;border:1px solid var(--z200) !important;border-radius:16px;box-shadow:var(--sombra);color:var(--z950)}
+.b-tile:hover{box-shadow:var(--sombra-h);border-color:var(--z300) !important}
+.b-tile::after{background:radial-gradient(420px circle at var(--mx,50%) var(--my,0%),rgba(9,9,11,.035),transparent 60%) !important}
+.b-tile p{color:var(--z600) !important}
+.b-ico{border:1px solid var(--z200) !important;border-radius:10px;color:var(--z950) !important;background:var(--z50)}
+.m-botones i{border-color:var(--z200) !important;color:var(--z600) !important;border-radius:8px;background:#fff}
+.m-nfc{background:var(--z950) !important;color:#fff !important;border-radius:12px;font-family:var(--mono) !important}
+.m-onda{border-color:var(--z300) !important;border-radius:16px}
+.m-tk{background:#fff !important;border:1px solid var(--z200);border-top:3px solid #F59E0B !important;border-radius:8px;box-shadow:var(--sombra)}
+.m-tk.ok{border-top-color:#10B981 !important}.m-t{font-family:var(--mono) !important;color:#B45309 !important}.m-tk.ok .m-t{color:#047857 !important}
+.m-tk em{background:var(--z100) !important}.m-col small{color:var(--z500) !important;font-family:var(--mono)}
+.m-aviso{background:#fff !important;border:1px solid var(--z200);border-radius:10px;box-shadow:var(--sombra)}
+.m-aviso span:last-child{font-family:var(--mono) !important;color:#0369A1 !important}
+.m-dot{background:#0EA5E9 !important}
+.m-yo{border-color:var(--z950) !important;color:#fff !important;background:var(--z950);border-radius:10px}
+.m-barras{border-bottom-color:var(--z200) !important}.m-barras i{background:linear-gradient(180deg,#27272A,#09090B) !important;border-radius:4px 4px 0 0}
+.m-kpis span{border-color:var(--z200) !important;border-radius:10px;background:var(--z50)}.m-kpis small{color:var(--z500) !important}.m-kpis b{color:var(--z950) !important;font-family:var(--mono) !important;font-weight:600 !important}
+.m-p{font-family:var(--mono) !important}
+/* un pedido (Mesa 7) */
+.viaje{background:radial-gradient(#E4E4E7 1px,transparent 1px) 0 0/20px 20px,var(--z50) !important}
+.viaje .f{border-left:1px solid var(--z200) !important;color:var(--z950) !important}
+.viaje .f p,.viaje h2{color:var(--z950) !important}
+.viaje .f::before{color:var(--z500) !important;font-family:var(--mono) !important}
+.ticket{background:#fff !important;color:var(--z950) !important;border:1px solid var(--z200);border-top:1px solid var(--z200) !important;border-radius:14px;box-shadow:var(--sombra-h) !important}
+.ticket .t b{font-family:var(--sans) !important;font-stretch:normal !important;font-weight:700 !important;letter-spacing:-.03em}
+.ticket .t span,.ticket li span:last-child,.ticket .e span:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.ticket li .q{font-family:var(--mono);font-stretch:normal !important;font-weight:600 !important;color:var(--z500) !important}
+.ticket .e{border-top-color:var(--z200) !important;color:var(--z600)}
+.ticket .sep{color:var(--z500) !important;font-family:var(--mono)}
+.ticket .ok{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;background:#ECFDF5;color:#047857 !important;border:1px solid #A7F3D0}
+.ticket .est{color:#B45309 !important}
+/* funciones */
+.capac2{background:#fff !important;color:var(--z950) !important}
+.c-sub,.c-lista p{color:var(--z600) !important}
+.c-lista{border-top-color:var(--z200) !important}.c-lista li{border-bottom-color:var(--z200) !important}
+.c-lista li:hover{background:linear-gradient(90deg,var(--z50),transparent) !important}
+.f-n{color:var(--z500) !important;font-family:var(--mono) !important;font-weight:500 !important}
+/* instalación */
+.instal2{background:var(--z50) !important;color:var(--z950) !important}
+.instal2 h2{color:var(--z950) !important}
+.i-linea::before{background:var(--z200) !important}
+.i-n{background:var(--z950) !important;color:#fff !important;border-radius:12px;box-shadow:0 0 0 8px var(--z50) !important;font-family:var(--mono) !important;font-weight:500 !important}
+.i-linea li>span:last-child{color:var(--z600) !important}
+.i-nota{background:#fff !important;border:1px solid var(--z200) !important;border-radius:16px;box-shadow:var(--sombra)}
+/* hecho para la sala */
+.sobre{background:#fff !important}
+.sobre .panel{background:var(--z50) !important;border:1px solid var(--z200) !important;border-radius:20px;margin:0 var(--m);color:var(--z950) !important}
+.sobre h2,.sobre h3{color:var(--z950) !important}.sobre .textos p{color:var(--z600) !important}
+.sobre .textos>div:not(:last-child){border-left-color:var(--z300) !important}
+.sobre .lobulo{border-color:var(--z200) !important;box-shadow:var(--sombra-h) !important;background:#fff !important}
+.sobre .lobulo video{filter:none !important}
+/* preguntas */
+.faq{background:#fff !important;color:var(--z950) !important}.faq h2{color:var(--z950) !important}
+.faq details{background:#fff !important;border:1px solid var(--z200) !important;border-radius:12px;color:var(--z950) !important;box-shadow:var(--sombra)}
+.faq details:hover{border-color:var(--z300) !important}
+.faq details[open]{background:var(--z50) !important;border-color:var(--z300) !important}
+.faq details[open] summary{color:var(--z950) !important}
+.faq summary{font-weight:600 !important}
+.faq details p{color:var(--z600) !important}
+.faq .mas::before,.faq .mas::after{background:var(--z500) !important;height:2px !important}
+/* presupuesto */
+.contacto{background:var(--z50) !important;color:var(--z950) !important;border-top:1px solid var(--z200)}
+.contacto h2{color:var(--z950) !important}.contacto .sub{color:var(--z600) !important}
+.marquesina img{border-radius:12px;border:1px solid var(--z200);box-shadow:var(--sombra)}
+.barra3 input,.barra3 button{height:64px !important;border-radius:12px !important;font-family:var(--sans) !important;font-size:17px !important;text-align:left !important;padding:0 20px !important}
+.barra3 input{background:#fff !important;color:var(--z950) !important;border:1px solid var(--z200) !important;box-shadow:var(--sombra)}
+.barra3 input::placeholder{color:var(--z500) !important}
+.barra3 input:focus{border-color:var(--z950) !important;box-shadow:0 0 0 1px var(--z950) !important}
+.barra3 button{background:var(--z950) !important;color:#fff !important;text-align:center !important;font-weight:600 !important}
+.barra3 button:hover{background:var(--z800) !important}
+.letra{color:var(--z500) !important}.letra a{color:var(--z950) !important}
+/* pie */
+.pie{background:#fff !important;color:var(--z950) !important;border-top:1px solid var(--z200)}
+.pie .cols b{color:var(--z950) !important}.pie .cols a{color:var(--z600) !important}.pie .cols a:hover{color:var(--z950) !important}
+.pie .ult{color:var(--z500) !important}.pie .ct,.pie .ct span{color:var(--z600)}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 <script type="module" src="nfc3d.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 <header class="cab" id="cab">
@@ -480,7 +593,7 @@ body{background:#101417}
 </header>
 
 <main id="arriba">
-<section class="portada" data-ink="#FFFFFF" aria-labelledby="h1">
+<section class="portada" data-ink="#09090B" aria-labelledby="h1">
   <div class="p-fondo" aria-hidden="true"></div><div class="campo-b" hidden></div>
   <div class="p-grid">
     <div class="p-texto">
@@ -493,7 +606,7 @@ body{background:#101417}
   </div>
 </section>
 
-<section class="recorrido" id="recorrido" data-ink="#FFFFFF" aria-labelledby="h-rec">
+<section class="recorrido" id="recorrido" data-ink="#09090B" aria-labelledby="h-rec">
   <div class="rec-pista">
     <div class="rec-escena">
       <div class="rec-marco"><canvas id="rec-canvas" aria-hidden="true"></canvas><img class="rec-poster" src="recorrido/s/001.webp" alt="" width="720" height="405"><div class="rec-velo"></div><div class="rec-velo der"></div></div>
@@ -517,7 +630,7 @@ body{background:#101417}
   </div>
 </section>
 
-<section class="pantallas" id="pantallas" data-ink="#FFFFFF" aria-labelledby="h-pant">
+<section class="pantallas" id="pantallas" data-ink="#09090B" aria-labelledby="h-pant">
   <div class="sec-cab"><p class="p-kicker sube">Pantallas</p><h2 class="d sube" id="h-pant">Una pantalla para cada sitio</h2></div>
   <div class="bento">
     <article class="b-tile b-carta sube">
@@ -551,38 +664,38 @@ body{background:#101417}
 </section>
 
 <section class="viaje" id="viaje" aria-labelledby="h-viaje">
-  <div class="f" data-n="01" data-ink="#FFFFFF">
+  <div class="f" data-n="01" data-ink="#09090B">
     <h2 class="d sube" id="h-viaje">Un pedido</h2>
     <div class="ticket" data-ui style="--q:#962B23"><div class="t"><b>Mesa 7</b><span>21:04</span></div><ul><li><span><b class="q">2×</b>Caña</span></li><li><span><b class="q">1×</b>Croquetas de jamón</span></li></ul><div class="e"><span>Enviado desde la mesa</span><span>0:00</span></div></div>
     <p class="sube">Primero, la mesa pide desde el móvil.</p>
   </div>
-  <div class="f" data-n="02" data-ink="#FFFFFF">
+  <div class="f" data-n="02" data-ink="#09090B">
     <div class="ticket" data-ui style="--q:#B98128"><div class="t"><b>Mesa 7</b><span>3:12</span></div><p class="sep">BARRA</p><ul><li><span><b class="q">2×</b>Caña</span><span class="ok">Lista</span></li></ul><p class="sep">COCINA</p><ul><li><span><b class="q">1×</b>Croquetas de jamón</span><span>En marcha</span></li></ul><div class="e"><span>Cada uno ve lo suyo</span><span>Ana confirmó</span></div></div>
     <p class="sube">Luego, cocina y barra lo preparan.</p>
   </div>
-  <div class="f" data-n="03" data-ink="#FFFFFF">
+  <div class="f" data-n="03" data-ink="#09090B">
     <div class="ticket" data-ui style="--q:#2B6659"><div class="t"><b>Mesa 7</b><span>8:40</span></div><ul><li><span><b class="q">2×</b>Caña</span><span class="ok">Servido</span></li><li><span><b class="q">1×</b>Croquetas de jamón</span><span class="ok">Servido</span></li></ul><div class="e"><span>«Yo me encargo» · Sara</span><span>Llamada 0:21</span></div></div>
     <p class="sube">Después, alguien se encarga de la mesa.</p>
   </div>
-  <div class="f" data-n="04" data-ink="#FFFFFF">
+  <div class="f" data-n="04" data-ink="#09090B">
     <div class="ticket" data-ui style="--q:#38536A"><div class="t"><b>Mesa 7</b><span>Cerrada</span></div><ul><li><span><b class="q">2×</b>Caña</span><span>3,60 €</span></li><li><span><b class="q">1×</b>Croquetas de jamón</span><span>5,80 €</span></li></ul><div class="e"><span>Cobrado con tarjeta · 9,40 €</span><span class="est">5 de 5 · Sara</span></div></div>
     <p class="sube">Y tú lo ves todo, en caja y en el ranking.</p>
   </div>
 </section>
 
-<section class="capac2" data-ink="#FFFFFF" aria-labelledby="h-capac">
+<section class="capac2" data-ink="#09090B" aria-labelledby="h-capac">
   <div class="c-izq"><p class="p-kicker sube">Funciones</p><h2 class="d sube" id="h-capac">Enciende lo que necesitas</h2><p class="c-sub sube">Cada bar es distinto: activamos solo lo que tu sala va a usar.</p></div>
   <ol class="c-lista"><li class="sube"><span class="f-n">01</span><div><h3>Que pidan desde la mesa, sin app.</h3><p>Tarjeta NFC o código QR en cada mesa. Carta con fotos, alérgenos y tres idiomas; también pago con tarjeta y pedidos para llevar.</p></div></li><li class="sube"><span class="f-n">02</span><div><h3>Que cualquiera coja cualquier mesa.</h3><p>Sin repartir mesas: quien pulsa «Yo me encargo» se queda la mesa y el cliente ve su nombre. El ranking cuenta mesas y estrellas de cada camarero.</p></div></li><li class="sube"><span class="f-n">03</span><div><h3>Que la cocina vea solo lo suyo.</h3><p>La comanda se parte sola: los platos a cocina y la bebida a barra, con el tiempo de cada una e impresión de tickets.</p></div></li><li class="sube"><span class="f-n">04</span><div><h3>Que el equipo fiche con su usuario.</h3><p>Entrada, pausas y salida desde una pantalla aparte, con el registro de jornada que pide la ley guardado cuatro años.</p></div></li><li class="sube"><span class="f-n">05</span><div><h3>Que nadie toque la caja a escondidas.</h3><p>Un registro que nadie del local puede borrar: quién bajó una cuenta, anuló un pedido o cobró sin forma de pago, y cuándo.</p></div></li></ol>
 </section>
 
-<section class="instal2" id="instalacion" data-ink="#FFFFFF" aria-labelledby="h-inst">
+<section class="instal2" id="instalacion" data-ink="#09090B" aria-labelledby="h-inst">
   <div class="sec-cab"><p class="p-kicker sube">Instalación</p><h2 class="d sube" id="h-inst">Lo montamos nosotros</h2></div>
   <ol class="i-linea"><li class="sube" style="--dl:0ms"><span class="i-n">1</span><b>Tu carta</b><span>con fotos, precios y alérgenos</span></li><li class="sube" style="--dl:90ms"><span class="i-n">2</span><b>Tus mesas</b><span>el plano de tu sala, por zonas</span></li><li class="sube" style="--dl:180ms"><span class="i-n">3</span><b>Tarjetas NFC</b><span>una en cada mesa, grabada</span></li><li class="sube" style="--dl:270ms"><span class="i-n">4</span><b>Tablets</b><span>y móviles, si no tienes</span></li><li class="sube" style="--dl:360ms"><span class="i-n">5</span><b>Formación</b><span>a tu equipo, en tu local</span></li></ol>
   <div class="i-nota sube"><p>Llegamos con el sistema preparado con tu marca, lo dejamos funcionando en tu sala y enseñamos a tu equipo a usarlo.</p><a class="btn" href="#contacto">Pide presupuesto</a></div>
 </section>
 
-<section class="sobre" data-ink="#FFFFFF" aria-labelledby="h-sobre">
-  <div class="panel" data-ink="#FFFFFF">
+<section class="sobre" data-ink="#09090B" aria-labelledby="h-sobre">
+  <div class="panel" data-ink="#09090B">
     <h2 class="d sube" id="h-sobre">Hecho para la sala de un bar</h2>
     <div class="lobulo"><video src="video/camarero-bucle.mp4" poster="video/camarero-bucle.jpg" muted loop playsinline autoplay preload="metadata" aria-label="Avisos de mesa apilándose en el móvil del camarero"></video></div>
     <div class="textos">
@@ -593,7 +706,7 @@ body{background:#101417}
   </div>
 </section>
 
-<section class="faq" id="preguntas" data-ink="#FFFFFF" aria-labelledby="h-faq">
+<section class="faq" id="preguntas" data-ink="#09090B" aria-labelledby="h-faq">
   <h2 class="d" id="h-faq">Lo que nos preguntan</h2>
   <div class="lista">
     <details name="faq" open><summary>¿El cliente tiene que instalar algo?<span class="mas" aria-hidden="true"></span></summary><p>No. Acerca el móvil a la tarjeta de su mesa (o escanea el código) y se abre tu carta en el navegador, sin crear cuenta.</p></details>
@@ -606,7 +719,7 @@ body{background:#101417}
   </div>
 </section>
 
-<section class="contacto" id="contacto" data-ink="#FFFFFF" aria-labelledby="h-cont">
+<section class="contacto" id="contacto" data-ink="#09090B" aria-labelledby="h-cont">
   <div class="marquesina" aria-hidden="true">
     <img class="c" src="img/m-carta2.jpg" alt=""><img class="a" src="img/panel-resumen.jpg" alt=""><img src="img/m-sala.jpg" alt=""><img class="a" src="img/barra.jpg" alt=""><img src="img/m-mesa.jpg" alt=""><img class="a" src="img/panel-rendimiento.jpg" alt=""><img class="c" src="img/m-avisos.jpg" alt=""><img class="a" src="img/panel-economia.jpg" alt="">
     <img class="c" src="img/m-carta2.jpg" alt=""><img class="a" src="img/panel-resumen.jpg" alt=""><img src="img/m-sala.jpg" alt=""><img class="a" src="img/barra.jpg" alt=""><img src="img/m-mesa.jpg" alt=""><img class="a" src="img/panel-rendimiento.jpg" alt=""><img class="c" src="img/m-avisos.jpg" alt=""><img class="a" src="img/panel-economia.jpg" alt="">
@@ -622,7 +735,7 @@ body{background:#101417}
 </section>
 </main>
 
-<footer class="pie" data-ink="#DEE0DD">
+<footer class="pie" data-ink="#09090B">
   <svg class="bloques" viewBox="0 0 1000 300" role="img" aria-label="Metriax"><g class="bl"><rect x="0.0" y="0.0" width="137.7" height="300.0" fill="#962B23"/><text x="68.9" y="118.0" text-anchor="middle">M</text></g><g class="bl"><rect x="143.7" y="78.0" width="137.7" height="222.0" fill="#B98128"/><text x="212.6" y="196.0" text-anchor="middle">E</text></g><g class="bl"><rect x="287.4" y="36.0" width="137.7" height="264.0" fill="#2B6659"/><text x="356.3" y="154.0" text-anchor="middle">T</text></g><g class="bl"><rect x="431.1" y="102.0" width="137.7" height="198.0" fill="#38536A"/><text x="500.0" y="220.0" text-anchor="middle">R</text></g><g class="bl"><rect x="574.9" y="18.0" width="137.7" height="282.0" fill="#DEE0DD"/><text x="643.7" y="136.0" text-anchor="middle">I</text></g><g class="bl"><rect x="718.6" y="66.0" width="137.7" height="234.0" fill="#962B23"/><text x="787.4" y="184.0" text-anchor="middle">A</text></g><g class="bl"><rect x="862.3" y="0.0" width="137.7" height="300.0" fill="#B98128"/><text x="931.1" y="118.0" text-anchor="middle">X</text></g></svg>
   <div class="cols">
     <div><b>Producto</b><a href="#pantallas">Pantallas</a><a href="#viaje">Cómo funciona</a><a href="#instalacion">Instalación</a></div>
