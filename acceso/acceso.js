@@ -66,15 +66,16 @@
 
   // Invitación o recuperación: el enlace del correo trae la sesión en la dirección y hay que crear la contraseña
   const vieneDeCorreo = /type=(invite|recovery|signup)/.test(location.hash);
+  const esRecuperacion = /type=recovery/.test(location.hash);
   function pedirClave(){ $("f").hidden=true; $("sesion").hidden=true; $("f-clave").hidden=false; }
-  sb.auth.onAuthStateChange(ev => { if(ev==="PASSWORD_RECOVERY") pedirClave(); });
+  sb.auth.onAuthStateChange(ev => { if(ev==="PASSWORD_RECOVERY" && esRecuperacion) pedirClave(); });
   $("f-clave").addEventListener("submit", async e => {
     e.preventDefault(); const er=$("error2"); er.hidden=true;
     const a=$("nueva").value, b=$("nueva2").value;
     if(a.length<10){ er.textContent="La contraseña necesita al menos 10 caracteres."; er.hidden=false; return; }
     if(a!==b){ er.textContent="Las dos contraseñas no coinciden."; er.hidden=false; return; }
     $("guardar").disabled=true;
-    const { error:x } = await sb.auth.updateUser({ password:a });
+    const { error:x } = await sb.auth.updateUser({ password:a, data:{ clave_creada:true } });
     $("guardar").disabled=false;
     if(x){ er.textContent="No se ha podido guardar: "+x.message; er.hidden=false; return; }
     history.replaceState(null,"",location.pathname); $("f-clave").hidden=true; mostrarSesion(true);
@@ -87,6 +88,15 @@
   });
 
   $("salir").addEventListener("click", async () => { await sb.auth.signOut(); $("sesion").hidden=true; $("f").hidden=false; });
-  if(vieneDeCorreo){ sb.auth.getSession().then(({data}) => { if(data.session) pedirClave(); else error("El enlace ha caducado. Pide otro a Metriax."); }); }
+  // Solo se pide crear contraseña si viene de "He olvidado mi contraseña" o de una invitación que aún no la tiene.
+  if(vieneDeCorreo){
+    sb.auth.getSession().then(({data}) => {
+      history.replaceState(null,"",location.pathname);
+      const s = data.session;
+      if(!s) return mostrarSesion(false);
+      const yaTiene = s.user && s.user.user_metadata && s.user.user_metadata.clave_creada;
+      if(esRecuperacion || !yaTiene) pedirClave(); else mostrarSesion(true);
+    });
+  }
   else mostrarSesion(false);
 })();
