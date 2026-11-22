@@ -342,6 +342,97 @@ h1,h2,h3,p{margin:0}
 }
 @media (max-width:420px){.portada .acc .btn{flex:1 1 auto;min-height:48px;padding:0 16px}}
 .rec-pasos li{transition:opacity .18s ease,transform .25s ease}.rec-pasos li.on{transition:opacity .5s var(--ease) .18s,transform .6s var(--ease) .18s}
+/* ===== Secciones premium (pantallas, pedido, funciones, instalación) ===== */
+.pantallas,.capac2,.instal2{position:relative;color:var(--cal);padding:clamp(80px,11vw,150px) var(--m)}
+.pantallas{background:radial-gradient(60% 50% at 85% 10%,rgba(185,129,40,.12),rgba(185,129,40,0) 70%),#121619}
+.sec-cab{display:grid;gap:16px;margin-bottom:clamp(36px,5vw,64px)}
+.sec-cab h2,.c-izq h2{font-size:clamp(44px,6vw,96px);color:var(--cal)}
+/* bento */
+.bento{display:grid;grid-template-columns:1.15fr 1fr 1fr;grid-template-rows:auto auto;gap:14px}
+.b-tile{position:relative;overflow:hidden;display:grid;align-content:start;gap:10px;padding:clamp(22px,2.4vw,34px);min-height:320px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));border:1px solid rgba(222,224,221,.09);transition:border-color .4s var(--ease),transform .5s var(--ease)}
+.b-tile::after{content:"";position:absolute;inset:-1px;pointer-events:none;background:radial-gradient(400px circle at var(--mx,50%) var(--my,0%),rgba(231,194,122,.13),transparent 60%);opacity:0;transition:opacity .4s}
+.b-tile:hover{border-color:rgba(185,129,40,.45);transform:translateY(-3px)}.b-tile:hover::after{opacity:1}
+.b-carta{grid-row:span 2;min-height:660px}
+.b-ico{width:44px;height:44px;display:grid;place-items:center;border:1px solid rgba(185,129,40,.5);color:var(--ocre)}
+.b-ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.b-tile h3{font-size:clamp(24px,2vw,32px);font-weight:780;letter-spacing:-.015em;margin-top:8px}
+.b-tile p{color:#AEB4B0;font-size:16px;line-height:1.5;max-width:38ch}
+.mock{margin-top:auto;padding-top:22px}
+/* carta */
+.m-tel{width:min(260px,100%);margin:18px auto 0;padding:16px 14px;border-radius:30px;background:#0b0e10;border:1px solid rgba(255,255,255,.12);box-shadow:0 30px 60px rgba(0,0,0,.45),inset 0 0 0 6px #171c1f;display:grid;gap:10px}
+.m-idiomas{display:flex;gap:4px;justify-content:flex-end}.m-idiomas i{font:700 10px/1 "Archivo";font-style:normal;padding:5px 7px;color:#9aa19c;border:1px solid #2a3236}.m-idiomas i.on{background:var(--cal);color:var(--pizarra)}
+.m-plato{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:8px;background:#151a1d;border:1px solid #232b2f}
+.m-foto{width:44px;height:44px;background:linear-gradient(135deg,#B98128,#962B23)}.m-foto.f2{background:linear-gradient(135deg,#2B6659,#B98128)}.m-foto.f3{background:linear-gradient(135deg,#962B23,#38536A)}
+.m-l{display:grid;gap:6px}.m-l b{height:8px;width:80%;background:#cfd3cf}.m-l em{height:6px;width:55%;background:#3a4448}
+.m-p{font:700 12px/1 "Archivo";color:var(--ocre)}
+.m-alerg{display:flex;gap:6px}.m-alerg i{width:16px;height:16px;border-radius:50%;background:#2a3236}.m-alerg i:nth-child(2){background:#B98128}.m-alerg i:nth-child(4){background:#2B6659}
+.m-pedir{text-align:center;font:700 13px/1 "Archivo";padding:12px;background:var(--granate);color:#fff;animation:latido 2.6s var(--ease) infinite}
+@keyframes latido{0%,100%{box-shadow:0 0 0 0 rgba(150,43,35,.5)}50%{box-shadow:0 0 0 10px rgba(150,43,35,0)}}
+/* mesa */
+.m-mesa{position:relative;height:160px;display:grid;place-items:center}
+.m-nfc{position:relative;z-index:2;width:58px;height:58px;display:grid;place-items:center;font:800 22px/1 "Archivo";background:var(--ocre);color:var(--pizarra)}
+.m-onda{position:absolute;left:50%;top:42%;width:58px;height:58px;border:1px solid var(--ocre);transform:translate(-50%,-50%);animation:onda 2.8s ease-out infinite;opacity:0}
+.m-onda.o2{animation-delay:.9s}.m-onda.o3{animation-delay:1.8s}
+@keyframes onda{0%{opacity:.7;width:58px;height:58px}100%{opacity:0;width:190px;height:190px}}
+.m-botones{position:absolute;left:0;right:0;bottom:0;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.m-botones i{font:650 12px/1 "Archivo";font-style:normal;padding:8px 10px;border:1px solid rgba(222,224,221,.2);color:#cfd3cf}
+/* cocina */
+.m-kds{display:grid;grid-template-columns:1.3fr 1fr;gap:10px}
+.m-col{display:grid;gap:8px;align-content:start}.m-col small{font:700 10px/1 "Archivo";letter-spacing:.14em;color:#7d8682}
+.m-tk{display:grid;grid-template-columns:1fr auto;gap:6px;padding:10px;background:#EEF0ED;color:var(--pizarra);border-top:3px solid var(--granate)}
+.m-tk.ok{border-top-color:#2B6659}.m-tk b{font:800 13px/1 "Archivo"}.m-t{font:700 11px/1 "Archivo";color:var(--granate)}.m-tk.ok .m-t{color:#2B6659}
+.m-tk em{grid-column:1/-1;height:6px;width:85%;background:#c5cac6}.m-tk em.c{width:60%}
+/* camarero */
+.m-cam{display:grid;gap:10px}
+.m-aviso{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:14px;background:#EEF0ED;color:var(--pizarra);animation:entra 3.2s var(--ease) infinite}
+.m-aviso b{font:750 14px/1.1 "Archivo"}.m-aviso span:last-child{font:700 12px/1 "Archivo";color:var(--granate)}
+.m-dot{width:10px;height:10px;border-radius:50%;background:var(--granate);box-shadow:0 0 0 0 rgba(150,43,35,.6);animation:latido 1.4s infinite}
+.m-yo{text-align:center;padding:12px;font:700 13px/1 "Archivo";border:1px solid var(--ocre);color:var(--ocre)}
+@keyframes entra{0%,8%{transform:translateY(-14px);opacity:0}16%,84%{transform:none;opacity:1}100%{transform:translateY(-6px);opacity:0}}
+/* panel */
+.m-panel{display:grid;gap:14px}
+.m-barras{height:96px;display:flex;align-items:flex-end;gap:8px;border-bottom:1px solid rgba(222,224,221,.15)}
+.m-barras i{flex:1;height:var(--h);background:linear-gradient(180deg,#E2B868,#B98128);transform-origin:bottom;transform:scaleY(.15);transition:transform 1.2s var(--ease)}
+.b-panel.in .m-barras i{transform:none}.b-panel.in .m-barras i:nth-child(2){transition-delay:.08s}.b-panel.in .m-barras i:nth-child(3){transition-delay:.16s}.b-panel.in .m-barras i:nth-child(4){transition-delay:.24s}.b-panel.in .m-barras i:nth-child(5){transition-delay:.32s}.b-panel.in .m-barras i:nth-child(6){transition-delay:.4s}.b-panel.in .m-barras i:nth-child(7){transition-delay:.48s}
+.m-kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}.m-kpis span{display:grid;gap:4px;padding:10px;border:1px solid rgba(222,224,221,.1)}
+.m-kpis small{font-size:11px;color:#8d9591}.m-kpis b{font:800 22px/1 "Archivo";color:var(--cal)}
+/* un pedido: misma idea, fondo premium */
+.viaje{background:radial-gradient(50% 60% at 15% 0%,rgba(150,43,35,.25),rgba(150,43,35,0) 70%),radial-gradient(50% 60% at 90% 100%,rgba(185,129,40,.16),rgba(185,129,40,0) 70%),#0f1315 !important}
+.viaje .f{background:transparent !important;border-left:1px solid rgba(185,129,40,.28);color:var(--cal) !important}
+.viaje .f:first-child{border-left:0}
+.viaje .f p,.viaje h2{color:var(--cal) !important}
+.viaje .f::before{content:attr(data-n);position:absolute;top:28px;right:24px;font:700 13px/1 "Archivo";letter-spacing:.16em;color:var(--ocre)}
+.viaje .ticket{box-shadow:0 30px 60px rgba(0,0,0,.45);border-top:4px solid var(--q)}
+/* funciones */
+.capac2{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(32px,6vw,100px);background:#141a1d}
+.c-izq{position:sticky;top:120px;align-self:start;display:grid;gap:18px}
+.c-sub{color:#AEB4B0;font-size:18px;max-width:34ch}
+.c-lista{list-style:none;margin:0;padding:0;border-top:1px solid rgba(222,224,221,.12)}
+.c-lista li{display:grid;grid-template-columns:64px 1fr;gap:18px;padding:clamp(26px,3vw,40px) 0;border-bottom:1px solid rgba(222,224,221,.12);transition:background .4s var(--ease)}
+.c-lista li:hover{background:linear-gradient(90deg,rgba(185,129,40,.07),transparent)}
+.f-n{font:800 15px/1 "Archivo";color:var(--ocre);padding-top:8px}
+.c-lista h3{font-size:clamp(22px,2vw,30px);font-weight:780;letter-spacing:-.015em;margin-bottom:10px}
+.c-lista p{color:#AEB4B0;font-size:17px;line-height:1.55;max-width:52ch}
+/* instalación */
+.instal2{background:radial-gradient(60% 60% at 50% 100%,rgba(185,129,40,.14),rgba(185,129,40,0) 70%),#101417}
+.i-linea{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:18px;position:relative}
+.i-linea::before{content:"";position:absolute;left:28px;right:28px;top:27px;height:1px;background:linear-gradient(90deg,var(--ocre),rgba(185,129,40,.25))}
+.i-linea li{position:relative;display:grid;gap:8px;align-content:start}
+.i-n{width:56px;height:56px;display:grid;place-items:center;font:800 18px/1 "Archivo";color:var(--pizarra);background:var(--ocre);box-shadow:0 0 0 8px #101417;margin-bottom:14px}
+.i-linea b{font-size:clamp(20px,1.7vw,26px);font-weight:780;letter-spacing:-.01em}
+.i-linea li>span:last-child{color:#AEB4B0;font-size:16px}
+.i-nota{margin-top:clamp(48px,6vw,80px);display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between;padding:clamp(24px,3vw,40px);border:1px solid rgba(185,129,40,.35);background:rgba(185,129,40,.06)}
+.i-nota p{font-size:clamp(18px,1.6vw,22px);max-width:56ch}
+.i-nota .btn{background:var(--granate);color:#fff}.i-nota .btn:hover{background:#7E231C}
+@media (max-width:1000px){
+  .bento{grid-template-columns:1fr 1fr}.b-carta{grid-row:auto;grid-column:1/-1;min-height:0}
+  .capac2{grid-template-columns:1fr}.c-izq{position:static}
+  .i-linea{grid-template-columns:1fr;gap:26px}.i-linea::before{left:27px;right:auto;top:28px;bottom:28px;width:1px;height:auto;background:linear-gradient(180deg,var(--ocre),rgba(185,129,40,.25))}
+  .i-linea li{grid-template-columns:56px 1fr;column-gap:18px}.i-n{grid-row:span 2;margin:0}
+}
+@media (max-width:640px){.bento{grid-template-columns:1fr}.b-tile{min-height:0}.viaje .f{border-left:0;border-top:1px solid rgba(185,129,40,.28)}}
+@media (prefers-reduced-motion:reduce){.m-onda,.m-aviso,.m-pedir,.m-dot{animation:none}.m-barras i{transform:none}}
+.viaje{margin-top:0 !important}.viaje .f{padding-top:72px}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 <script type="module" src="nfc3d.js"></script>
@@ -400,65 +491,68 @@ h1,h2,h3,p{margin:0}
   </div>
 </section>
 
-<section class="escaparate" id="pantallas" data-ink="#1C2124" aria-labelledby="h-pant">
-  <div class="izq">
-    <h2 class="d sube" id="h-pant">Una pantalla para cada sitio</h2>
-    <ul class="indice" role="list">
-      <li><button type="button" data-p="0" aria-pressed="true" class="sube" style="--dl:60ms">La carta<small>En el móvil del cliente, en español, inglés y portugués, con fotos y los 14 alérgenos.</small></button></li>
-      <li><button type="button" data-p="1" aria-pressed="false" class="sube" style="--dl:120ms">La mesa<small>Acerca el móvil a la tarjeta NFC: pide, llama al camarero, pide la cuenta y valora.</small></button></li>
-      <li><button type="button" data-p="2" aria-pressed="false" class="sube" style="--dl:180ms">Cocina y barra<small>Cada una recibe solo lo suyo, con el tiempo que lleva cada comanda.</small></button></li>
-      <li><button type="button" data-p="3" aria-pressed="false" class="sube" style="--dl:240ms">El camarero<small>Avisos con sonido, «Yo me encargo», tomar nota y cobrar desde el móvil.</small></button></li>
-      <li><button type="button" data-p="4" aria-pressed="false" class="sube" style="--dl:300ms">Tu panel<small>La sala en vivo, la caja, el inventario y el ranking de tu equipo.</small></button></li>
-    </ul>
-  </div>
-  <div class="escenario" data-ui>
-    <figure class="movil on"><figcaption>Carta · móvil del cliente</figcaption><img src="img/m-carta.jpg" width="780" height="1688" alt="Carta digital de Tres Hermanos en un móvil, con secciones, platos más pedidos y filtro de alérgenos"></figure>
-    <figure class="movil"><figcaption>Mesa 2 · móvil del cliente</figcaption><img src="img/m-mesa.jpg" width="780" height="1688" alt="Pantalla de la mesa 2: cuenta pedida con tarjeta, pedido en preparación y botones para llamar al camarero" loading="lazy"></figure>
-    <figure class="ancho"><figcaption>Cocina · tablet</figcaption><img src="img/cocina.jpg" width="2880" height="1800" alt="Pantalla de cocina con las comandas nuevas y en preparación de cada mesa" loading="lazy"></figure>
-    <figure class="movil"><figcaption>Camarero · móvil</figcaption><img src="img/m-avisos.jpg" width="780" height="1688" alt="Avisos del camarero: mesas que llaman y piden la cuenta, con el botón Yo me encargo" loading="lazy"></figure>
-    <figure class="ancho"><figcaption>Panel · sala en vivo</figcaption><img src="img/panel-sala.jpg" width="2880" height="1800" alt="Panel del dueño con el plano de mesas en baldosas y su estado en directo" loading="lazy"></figure>
+<section class="pantallas" id="pantallas" data-ink="#FFFFFF" aria-labelledby="h-pant">
+  <div class="sec-cab"><p class="p-kicker sube">Pantallas</p><h2 class="d sube" id="h-pant">Una pantalla para cada sitio</h2></div>
+  <div class="bento">
+    <article class="b-tile b-carta sube">
+      <div class="b-ico"><svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M9 9h7M9 13h7M9 17h4"/></svg></div><h3>La carta</h3><p>En el móvil del cliente, en español, inglés y portugués, con fotos y los 14 alérgenos.</p>
+      <div class="mock m-carta" aria-hidden="true"><div class="m-tel"><div class="m-idiomas"><i class="on">ES</i><i>EN</i><i>PT</i></div>
+        <div class="m-plato"><span class="m-foto"></span><span class="m-l"><b></b><em></em></span><span class="m-p">12,50</span></div>
+        <div class="m-plato"><span class="m-foto f2"></span><span class="m-l"><b></b><em></em></span><span class="m-p">9,90</span></div>
+        <div class="m-plato"><span class="m-foto f3"></span><span class="m-l"><b></b><em></em></span><span class="m-p">6,50</span></div>
+        <div class="m-alerg"><i></i><i></i><i></i><i></i><i></i></div><div class="m-pedir">Enviar pedido</div></div></div>
+    </article>
+    <article class="b-tile b-mesa sube">
+      <div class="b-ico"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M3 9a6 6 0 0 1 0 6M20.5 7a9 9 0 0 1 0 10"/></svg></div><h3>La mesa</h3><p>Acerca el móvil a la tarjeta NFC: pide, llama al camarero, pide la cuenta y valora.</p>
+      <div class="mock m-mesa" aria-hidden="true"><span class="m-onda"></span><span class="m-onda o2"></span><span class="m-onda o3"></span><span class="m-nfc">4</span>
+        <div class="m-botones"><i>Pedir</i><i>Llamar</i><i>Cuenta</i><i>★ Valorar</i></div></div>
+    </article>
+    <article class="b-tile b-cocina sube">
+      <div class="b-ico"><svg viewBox="0 0 24 24"><path d="M4 11h16v3a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6z"/><path d="M8 7c0-2 2-2 2-4M13 7c0-2 2-2 2-4"/></svg></div><h3>Cocina y barra</h3><p>Cada una recibe solo lo suyo, con el tiempo que lleva cada comanda.</p>
+      <div class="mock m-kds" aria-hidden="true"><div class="m-col"><small>COCINA</small><div class="m-tk"><b>Mesa 4</b><span class="m-t">03:12</span><em></em><em class="c"></em></div><div class="m-tk"><b>Mesa 9</b><span class="m-t">00:48</span><em></em></div></div>
+        <div class="m-col"><small>BARRA</small><div class="m-tk ok"><b>Mesa 4</b><span class="m-t">Lista</span><em></em></div></div></div>
+    </article>
+    <article class="b-tile b-cam sube">
+      <div class="b-ico"><svg viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4z"/><path d="M10 21h4"/></svg></div><h3>El camarero</h3><p>Avisos con sonido, «Yo me encargo», tomar nota y cobrar desde el móvil.</p>
+      <div class="mock m-cam" aria-hidden="true"><div class="m-aviso"><span class="m-dot"></span><b>Mesa 7 te llama</b><span>0:12</span></div><div class="m-yo">Yo me encargo</div></div>
+    </article>
+    <article class="b-tile b-panel sube">
+      <div class="b-ico"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div><h3>Tu panel</h3><p>La sala en vivo, la caja, el inventario y el ranking de tu equipo.</p>
+      <div class="mock m-panel" aria-hidden="true"><div class="m-barras"><i style="--h:38%"></i><i style="--h:55%"></i><i style="--h:42%"></i><i style="--h:70%"></i><i style="--h:62%"></i><i style="--h:88%"></i><i style="--h:76%"></i></div>
+        <div class="m-kpis"><span><small>Mesas abiertas</small><b>12</b></span><span><small>Ticket medio</small><b>24 €</b></span></div></div>
+    </article>
   </div>
 </section>
 
 <section class="viaje" id="viaje" aria-labelledby="h-viaje">
-  <div class="f" data-ink="#FFFFFF">
+  <div class="f" data-n="01" data-ink="#FFFFFF">
     <h2 class="d sube" id="h-viaje">Un pedido</h2>
     <div class="ticket" data-ui style="--q:#962B23"><div class="t"><b>Mesa 7</b><span>21:04</span></div><ul><li><span><b class="q">2×</b>Caña</span></li><li><span><b class="q">1×</b>Croquetas de jamón</span></li></ul><div class="e"><span>Enviado desde la mesa</span><span>0:00</span></div></div>
     <p class="sube">Primero, la mesa pide desde el móvil.</p>
   </div>
-  <div class="f" data-ink="#1C2124">
+  <div class="f" data-n="02" data-ink="#FFFFFF">
     <div class="ticket" data-ui style="--q:#B98128"><div class="t"><b>Mesa 7</b><span>3:12</span></div><p class="sep">BARRA</p><ul><li><span><b class="q">2×</b>Caña</span><span class="ok">Lista</span></li></ul><p class="sep">COCINA</p><ul><li><span><b class="q">1×</b>Croquetas de jamón</span><span>En marcha</span></li></ul><div class="e"><span>Cada uno ve lo suyo</span><span>Ana confirmó</span></div></div>
     <p class="sube">Luego, cocina y barra lo preparan.</p>
   </div>
-  <div class="f" data-ink="#FFFFFF">
+  <div class="f" data-n="03" data-ink="#FFFFFF">
     <div class="ticket" data-ui style="--q:#2B6659"><div class="t"><b>Mesa 7</b><span>8:40</span></div><ul><li><span><b class="q">2×</b>Caña</span><span class="ok">Servido</span></li><li><span><b class="q">1×</b>Croquetas de jamón</span><span class="ok">Servido</span></li></ul><div class="e"><span>«Yo me encargo» · Sara</span><span>Llamada 0:21</span></div></div>
     <p class="sube">Después, alguien se encarga de la mesa.</p>
   </div>
-  <div class="f" data-ink="#FFFFFF">
+  <div class="f" data-n="04" data-ink="#FFFFFF">
     <div class="ticket" data-ui style="--q:#38536A"><div class="t"><b>Mesa 7</b><span>Cerrada</span></div><ul><li><span><b class="q">2×</b>Caña</span><span>3,60 €</span></li><li><span><b class="q">1×</b>Croquetas de jamón</span><span>5,80 €</span></li></ul><div class="e"><span>Cobrado con tarjeta · 9,40 €</span><span class="est">5 de 5 · Sara</span></div></div>
     <p class="sube">Y tú lo ves todo, en caja y en el ranking.</p>
   </div>
 </section>
 
-<section class="capac" data-ink="#1C2124" aria-labelledby="h-capac">
-  <h2 class="d sube" id="h-capac">Enciende lo que necesitas</h2>
-  <div class="banda on" data-ink="#FFFFFF"><div><h3>Que pidan desde la mesa, sin app.</h3><p>Tarjeta NFC o código QR en cada mesa. Carta con fotos, alérgenos y tres idiomas; también pago con tarjeta y pedidos para llevar.</p></div><button class="interr" type="button" role="switch" aria-checked="true" aria-label="Pedidos desde la mesa"></button></div>
-  <div class="banda" data-ink="#1C2124"><div><h3>Que cualquiera coja cualquier mesa.</h3><p>Sin repartir mesas: quien pulsa «Yo me encargo» se queda la mesa y el cliente ve su nombre. El ranking cuenta mesas y estrellas de cada camarero.</p></div><button class="interr" type="button" role="switch" aria-checked="false" aria-label="Mesas sin asignar y ranking"></button></div>
-  <div class="banda on" data-ink="#1C2124"><div><h3>Que la cocina vea solo lo suyo.</h3><p>La comanda se parte sola: los platos a cocina y la bebida a barra, con el tiempo de cada una e impresión de tickets.</p></div><button class="interr" type="button" role="switch" aria-checked="true" aria-label="Cocina y barra separadas"></button></div>
-  <div class="banda" data-ink="#1C2124"><div><h3>Que el equipo fiche con su usuario.</h3><p>Entrada, pausas y salida desde una pantalla aparte, con el registro de jornada que pide la ley guardado cuatro años.</p></div><button class="interr" type="button" role="switch" aria-checked="false" aria-label="Fichaje del personal"></button></div>
-  <div class="banda" data-ink="#1C2124"><div><h3>Que nadie toque la caja a escondidas.</h3><p>Un registro que nadie del local puede borrar: quién bajó una cuenta, anuló un pedido o cobró sin forma de pago, y cuándo.</p></div><button class="interr" type="button" role="switch" aria-checked="false" aria-label="Control antifraude"></button></div>
+<section class="capac2" data-ink="#FFFFFF" aria-labelledby="h-capac">
+  <div class="c-izq"><p class="p-kicker sube">Funciones</p><h2 class="d sube" id="h-capac">Enciende lo que necesitas</h2><p class="c-sub sube">Cada bar es distinto: activamos solo lo que tu sala va a usar.</p></div>
+  <ol class="c-lista"><li class="sube"><span class="f-n">01</span><div><h3>Que pidan desde la mesa, sin app.</h3><p>Tarjeta NFC o código QR en cada mesa. Carta con fotos, alérgenos y tres idiomas; también pago con tarjeta y pedidos para llevar.</p></div></li><li class="sube"><span class="f-n">02</span><div><h3>Que cualquiera coja cualquier mesa.</h3><p>Sin repartir mesas: quien pulsa «Yo me encargo» se queda la mesa y el cliente ve su nombre. El ranking cuenta mesas y estrellas de cada camarero.</p></div></li><li class="sube"><span class="f-n">03</span><div><h3>Que la cocina vea solo lo suyo.</h3><p>La comanda se parte sola: los platos a cocina y la bebida a barra, con el tiempo de cada una e impresión de tickets.</p></div></li><li class="sube"><span class="f-n">04</span><div><h3>Que el equipo fiche con su usuario.</h3><p>Entrada, pausas y salida desde una pantalla aparte, con el registro de jornada que pide la ley guardado cuatro años.</p></div></li><li class="sube"><span class="f-n">05</span><div><h3>Que nadie toque la caja a escondidas.</h3><p>Un registro que nadie del local puede borrar: quién bajó una cuenta, anuló un pedido o cobró sin forma de pago, y cuándo.</p></div></li></ol>
 </section>
 
-<section class="instal" id="instalacion" data-ink="#DEE0DD" aria-labelledby="h-inst">
-  <h2 class="d sube" id="h-inst">Lo montamos nosotros</h2>
-  <ol>
-    <li class="sube"><b>Tu carta</b><span>con fotos, precios y alérgenos</span></li>
-    <li class="sube"><b>Tus mesas</b><span>el plano de tu sala, por zonas</span></li>
-    <li class="sube"><b>Tarjetas NFC</b><span>una en cada mesa, grabada</span></li>
-    <li class="sube"><b>Tablets</b><span>y móviles, si no tienes</span></li>
-    <li class="sube"><b>Formación</b><span>a tu equipo, en tu local</span></li>
-  </ol>
-  <p class="nota sube">Llegamos con el sistema preparado con tu marca, lo dejamos funcionando en tu sala y enseñamos a tu equipo a usarlo.</p>
+<section class="instal2" id="instalacion" data-ink="#FFFFFF" aria-labelledby="h-inst">
+  <div class="sec-cab"><p class="p-kicker sube">Instalación</p><h2 class="d sube" id="h-inst">Lo montamos nosotros</h2></div>
+  <ol class="i-linea"><li class="sube" style="--dl:0ms"><span class="i-n">1</span><b>Tu carta</b><span>con fotos, precios y alérgenos</span></li><li class="sube" style="--dl:90ms"><span class="i-n">2</span><b>Tus mesas</b><span>el plano de tu sala, por zonas</span></li><li class="sube" style="--dl:180ms"><span class="i-n">3</span><b>Tarjetas NFC</b><span>una en cada mesa, grabada</span></li><li class="sube" style="--dl:270ms"><span class="i-n">4</span><b>Tablets</b><span>y móviles, si no tienes</span></li><li class="sube" style="--dl:360ms"><span class="i-n">5</span><b>Formación</b><span>a tu equipo, en tu local</span></li></ol>
+  <div class="i-nota sube"><p>Llegamos con el sistema preparado con tu marca, lo dejamos funcionando en tu sala y enseñamos a tu equipo a usarlo.</p><a class="btn" href="#contacto">Pide presupuesto</a></div>
 </section>
 
 <section class="sobre" data-ink="#1C2124" aria-labelledby="h-sobre">
@@ -620,6 +714,9 @@ $$(".sube").forEach((el,i)=>{ if(!el.style.getPropertyValue("--dl")) el.style.se
   new IntersectionObserver((es,o)=>{ if(es.some(e=>e.isIntersecting)){ cargar(); o.disconnect(); } },{rootMargin:"150% 0px"}).observe(sec);
   addEventListener("scroll",pedir,{passive:true}); addEventListener("resize",medir); medir();
 })();
+
+// brillo que sigue al ratón en las tarjetas de pantallas
+$$(".b-tile").forEach(t=>t.addEventListener("pointermove",e=>{ const r=t.getBoundingClientRect(); t.style.setProperty("--mx",(e.clientX-r.left)+"px"); t.style.setProperty("--my",(e.clientY-r.top)+"px"); }));
 </script>
 </body>
 </html>
