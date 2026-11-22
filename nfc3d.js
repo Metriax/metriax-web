@@ -10,11 +10,11 @@ async function iniciar() {
   let r; try { r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, powerPreference: "high-performance" }); } catch (e) { caja.remove(); return; }
   try { await document.fonts.load('850 120px "Archivo"'); } catch (e) {}
   r.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
-  r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.05;
+  r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 0.92;
   const escena = new THREE.Scene();
-  const pm = new THREE.PMREMGenerator(r); escena.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+  const pm = new THREE.PMREMGenerator(r); escena.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; escena.environmentIntensity = 0.45;
   const cam = new THREE.PerspectiveCamera(28, 1, 1, 1000); cam.position.set(0, 0, 230);
-  const luz = new THREE.DirectionalLight(0xffffff, 1.6); luz.position.set(-80, 120, 160); escena.add(luz);
+  const luz = new THREE.DirectionalLight(0xffffff, 1.25); luz.position.set(-80, 120, 160); escena.add(luz);
   const luz2 = new THREE.DirectionalLight(0xffe8c8, 0.6); luz2.position.set(120, -40, 80); escena.add(luz2);
 
   // Tarjeta ISO CR80: 85,6 × 54 mm, canto redondeado de 3,18 mm
@@ -29,7 +29,7 @@ async function iniciar() {
   forma.lineTo(x, y + R); forma.quadraticCurveTo(x, y, x + R, y);
   const geo = new THREE.ShapeGeometry(forma, 24), uv = geo.attributes.uv, pos = geo.attributes.position;
   for (let i = 0; i < uv.count; i++) uv.setXY(i, (pos.getX(i) + W / 2) / W, (pos.getY(i) + H / 2) / H);
-  const mat = () => new THREE.MeshPhysicalMaterial({ roughness: 0.42, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.12, sheen: 0.2 });
+  const mat = () => new THREE.MeshPhysicalMaterial({ roughness: 0.55, metalness: 0, clearcoat: 0.55, clearcoatRoughness: 0.18 });
   const frente = new THREE.Mesh(geo, mat()); frente.position.z = G / 2 + 0.02; tarjeta.add(frente);
   const dorso = new THREE.Mesh(geo, mat()); dorso.position.z = -G / 2 - 0.02; dorso.rotation.y = Math.PI; tarjeta.add(dorso);
 
