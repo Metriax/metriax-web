@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tarjeta NFC La Parada</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap">
+<style>
+/* Layout: una sola escena 3D centrada, controles debajo. Tarjeta real recortada de la foto del cliente. */
+:root{
+  --bg:#f3f1ed;
+  --stage:#e7e3dc;
+  --fg:#2a2420;
+  --muted:#6f655b;
+  --line:#cfc8bc;
+  --ink:#2b1d14;
+  --red:#c8312b;
+  --paper:#fbf9f4;
+  --edge:#e4ded2;
+  --btn:#fbf9f4;
+  --shadow:rgba(40,28,18,.28);
+  --display:'Bebas Neue',Impact,'Arial Narrow',sans-serif;
+  --body:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1c1917;--stage:#2a2623;--fg:#efe9e1;--muted:#a79d92;--line:#453f39;--btn:#34302c;--shadow:rgba(0,0,0,.55);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1c1917;--stage:#2a2623;--fg:#efe9e1;--muted:#a79d92;--line:#453f39;--btn:#34302c;--shadow:rgba(0,0,0,.55);color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-direction:column;gap:2px}
+h1{margin:0;font-family:var(--display);font-weight:400;font-size:30px;letter-spacing:1px;line-height:1.1;text-wrap:balance}
+header p{margin:0;font-size:14px;color:var(--muted)}
+#stage{position:relative;height:min(560px,calc(100vw * 1.12));min-height:430px;display:flex;align-items:center;justify-content:center;perspective:1200px;background:var(--stage);border-radius:10px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;overflow:hidden;outline:2px dashed transparent;outline-offset:-8px;transition:outline-color .15s}
+#stage.drag{cursor:grabbing}
+#stage.over{outline-color:var(--red)}
+#floor{position:absolute;left:50%;bottom:9%;width:46%;height:22px;transform:translateX(-50%);background:var(--shadow);border-radius:50%;filter:blur(14px)}
+#card{--w:min(270px,60vw);position:relative;width:var(--w);aspect-ratio:720/1142;transform-style:preserve-3d;will-change:transform}
+.face,.edge{position:absolute;inset:0;border-radius:calc(var(--w)*.07)}
+.edge{background:var(--edge)}
+.face{backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;background:var(--paper)}
+.front{transform:translateZ(1px)}
+.front img{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-user-drag:none}
+.back{transform:rotateY(180deg) translateZ(6px);color:var(--ink);font-family:var(--display);text-align:center;display:flex;flex-direction:column;align-items:center;padding:8% 7% 6%;gap:4%}
+.back .t1{font-size:calc(var(--w)*.15);line-height:1;letter-spacing:1px}
+.back .t2{font-size:calc(var(--w)*.058);letter-spacing:2px;margin-top:-3%}
+.back svg.qr{width:56%;height:auto;margin-top:5%}
+.back .t3{font-size:calc(var(--w)*.075);line-height:1.1;margin-top:3%}
+.back .t4{font-family:var(--body);font-size:calc(var(--w)*.042);color:#6b5e50;line-height:1.45}
+.back .nfc{margin-top:auto;width:calc(var(--w)*.1);height:auto}
+.back img.custom{display:none;pointer-events:none;-webkit-user-drag:none;object-fit:cover}
+.group{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center}
+.label{width:100%;text-align:center;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+button,label.btn{font:inherit;font-size:14px;color:var(--fg);background:var(--btn);border:1px solid var(--line);border-radius:6px;padding:8px 14px;cursor:pointer;display:inline-block}
+button:hover,label.btn:hover{border-color:var(--muted)}
+button:focus-visible,label.btn:focus-within{outline:2px solid var(--red);outline-offset:2px}
+label.btn.main{background:var(--red);border-color:var(--red);color:#fff}
+label.btn input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0)}
+#msg{margin:0;text-align:center;font-size:13px;color:var(--fg);min-height:1.3em}
+#msg.err{color:var(--red)}
+#hint{margin:0;text-align:center;font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){#card{will-change:auto}#stage{transition:none}}
+</style>
+</head><body>
+<main>
+  <header>
+    <h1 id="ttl">Tarjeta NFC · Bar La Parada</h1>
+    <p>Tamaño tarjeta estándar (85,6 × 54 mm), impresa a doble cara.</p>
+  </header>
+  <div id="stage" aria-label="Tarjeta NFC en 3D. Arrastra para girarla. Suelta un archivo de imagen encima para ver tu diseño.">
+    <div id="floor"></div>
+    <div id="card">
+      <div class="edge" style="transform:translateZ(0px)"></div>
+      <div class="edge" style="transform:translateZ(-1px)"></div>
+      <div class="edge" style="transform:translateZ(-2px)"></div>
+      <div class="edge" style="transform:translateZ(-3px)"></div>
+      <div class="edge" style="transform:translateZ(-4px)"></div>
+      <div class="edge" style="transform:translateZ(-5px)"></div>
+      <div class="face front"><img id="fimg" src="card.jpg" alt="Cara delantera de la tarjeta: Bar La Parada, Almendralejo, ¡Pide aquí!, mesa 12" draggable="false"></div>
+      <div class="face back">
+        <div class="t1">BAR LA PARADA</div>
+        <div class="t2">CARTA DIGITAL · MESA 12</div>
+        <svg class="qr" viewBox="0 0 21 21" shape-rendering="crispEdges" aria-label="Código QR de ejemplo">
+          <rect width="21" height="21" fill="#fbf9f4"/>
+          <g fill="#2b1d14"><rect width="7" height="7"/><rect x="14" width="7" height="7"/><rect y="14" width="7" height="7"/></g>
+          <g fill="#fbf9f4"><rect x="1" y="1" width="5" height="5"/><rect x="15" y="1" width="5" height="5"/><rect x="1" y="15" width="5" height="5"/></g>
+          <g fill="#2b1d14"><rect x="2" y="2" width="3" height="3"/><rect x="16" y="2" width="3" height="3"/><rect x="2" y="16" width="3" height="3"/>
+            <rect x="8" y="1" width="2" height="2"/><rect x="11" y="3" width="2" height="2"/><rect x="8" y="6" width="3" height="1"/><rect x="9" y="9" width="2" height="2"/><rect x="12" y="8" width="3" height="2"/><rect x="16" y="9" width="2" height="3"/><rect x="1" y="9" width="3" height="2"/><rect x="5" y="11" width="2" height="2"/><rect x="9" y="13" width="3" height="2"/><rect x="13" y="12" width="2" height="3"/><rect x="16" y="14" width="3" height="2"/><rect x="9" y="17" width="2" height="3"/><rect x="13" y="17" width="4" height="2"/><rect x="18" y="18" width="2" height="2"/></g>
+        </svg>
+        <div class="t3">¿NO SE ABRE?<br>ESCANEA EL QR</div>
+        <div class="t4">Pide, paga con tarjeta o efectivo<br>o llama al camarero</div>
+        <svg class="nfc" viewBox="0 0 40 40" aria-hidden="true"><path d="M8 28c5-5 5-11 0-16M15 31c8-8 8-18 0-26M22 34c11-11 11-25 0-36" fill="none" stroke="#2b1d14" stroke-width="3" stroke-linecap="round" transform="translate(6 3)"/></svg>
+        <img id="bimg" class="custom" alt="Cara trasera con tu diseño" draggable="false">
+      </div>
+    </div>
+  </div>
+  <div id="ctl" class="group">
+    <button id="bf" type="button">Frente</button>
+    <button id="bb" type="button">Dorso</button>
+    <button id="ba" type="button">Auto-giro: no</button>
+    <button id="br" type="button">Reiniciar</button>
+  </div>
+  <div class="group" id="up">
+    <div class="label">Tu diseño</div>
+    <label class="btn main">Subir frente<input id="inF" type="file" accept="image/*"></label>
+    <label class="btn">Subir dorso<input id="inB" type="file" accept="image/*"></label>
+    <button id="brot" type="button">Girar diseño</button>
+    <button id="bfit" type="button">Ajuste: rellenar</button>
+    <button id="bclr" type="button">Volver al original</button>
+  </div>
+  <p id="msg" role="status" aria-live="polite"></p>
+  <p id="hint">Arrastra con el ratón o el dedo para girarla. Para ver tu diseño: usa los botones, suelta el archivo encima de la tarjeta o pégalo con Ctrl+V; se aplica a la cara que estés viendo. Formatos: PNG, JPG, WEBP o SVG (si es PDF, expórtalo antes a PNG). El QR del dorso original es solo un ejemplo.</p>
+</main>
+<script>
+(function(){
+var card=document.getElementById('card'),stage=document.getElementById('stage'),ba=document.getElementById('ba');
+var rx=-8,ry=-22,vy=0,auto=false,drag=false,lx=0,ly=0,target=null;
+var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function apply(){card.style.transform='rotateX('+rx+'deg) rotateY('+ry+'deg)';}
+apply();
+stage.addEventListener('pointerdown',function(e){drag=true;target=null;vy=0;lx=e.clientX;ly=e.clientY;stage.classList.add('drag');try{stage.setPointerCapture(e.pointerId);}catch(x){}});
+stage.addEventListener('pointermove',function(e){
+  if(!drag)return;
+  var dx=e.clientX-lx,dy=e.clientY-ly;
+  ry+=dx*0.6;vy=dx*0.6;rx-=dy*0.4;rx=Math.max(-70,Math.min(70,rx));
+  lx=e.clientX;ly=e.clientY;apply();
+});
+function up(){drag=false;stage.classList.remove('drag');}
+stage.addEventListener('pointerup',up);stage.addEventListener('pointercancel',up);
+function go(x,y){auto=false;ba.textContent='Auto-giro: no';vy=0;if(reduce){rx=x;ry=y;apply();return;}target={x:x,y:y};}
+function tick(){
+  if(!drag){
+    if(target){
+      var cy=((ry%360)+360)%360,d=((target.y-cy+540)%360)-180;
+      ry+=d*0.12;rx+=(target.x-rx)*0.12;
+      if(Math.abs(d)<0.4&&Math.abs(target.x-rx)<0.4){ry+=d;rx=target.x;target=null;}
+      apply();
+    }else if(auto&&!reduce){ry+=0.8;apply();}
+    else if(Math.abs(vy)>0.05&&!reduce){ry+=vy;vy*=0.94;apply();}
+  }
+  requestAnimationFrame(tick);
+}
+tick();
+document.getElementById('bf').onclick=function(){go(-8,-22);};
+document.getElementById('bb').onclick=function(){go(-8,158);};
+document.getElementById('br').onclick=function(){go(-8,-22);};
+ba.onclick=function(){auto=!auto;target=null;vy=0;ba.textContent='Auto-giro: '+(auto?'sí':'no');};
+
+/* ---- Diseño propio: cargar una imagen y verla en la cara de la tarjeta que se está viendo ---- */
+var ASPECT=1142/720; /* alto/ancho de la tarjeta */
+var imgs={front:document.getElementById('fimg'),back:document.getElementById('bimg')};
+var origFront=imgs.front.getAttribute('src'),origAlt=imgs.front.getAttribute('alt');
+var ttl=document.getElementById('ttl'),origTtl=ttl.textContent,msgEl=document.getElementById('msg');
+var fit='cover';
+var st={front:{rot:0,url:null,on:false},back:{rot:0,url:null,on:false}};
+function msg(t,err){msgEl.textContent=t;msgEl.className=err?'err':'';}
+function visible(){var c=((ry%360)+360)%360;return(c>90&&c<270)?'back':'front';}
+function layout(side){
+  var im=imgs[side],s=im.style,rot=st[side].rot;
+  if(!st[side].on){s.cssText='';return;}
+  s.position='absolute';s.left='50%';s.top='50%';s.maxWidth='none';s.objectFit=fit;
+  if(rot%180===0){s.width='100%';s.height='100%';}
+  else{s.width=(ASPECT*100)+'%';s.height=(100/ASPECT)+'%';}
+  s.transform='translate(-50%,-50%) rotate('+rot+'deg)';
+}
+function show(side,url,w,h,name){
+  var o=st[side];
+  if(o.url&&o.url!==url){try{URL.revokeObjectURL(o.url);}catch(e){}}
+  o.url=url;o.on=true;o.rot=(w>0&&h>0&&w>h*1.05)?90:0;
+  var im=imgs[side];
+  im.src=url;
+  if(side==='back')im.style.display='block';
+  layout(side);
+  if(side==='front'){ttl.textContent='Tarjeta NFC · Tu diseño';im.alt='Cara delantera con tu diseño: '+name;}
+  msg((side==='front'?'Frente':'Dorso')+': '+name+(o.rot?' (apaisado, girado 90°; usa «Girar diseño» si queda al revés)':'')+'.');
+}
+function load(file,side){
+  if(!file)return;
+  var okType=/^image\//.test(file.type)||/\.(png|jpe?g|webp|gif|svg|avif|bmp)$/i.test(file.name||'');
+  if(!okType){msg('«'+(file.name||'archivo')+'» no es una imagen. Usa PNG, JPG, WEBP o SVG (un PDF expórtalo antes a PNG).',true);return;}
+  var url=URL.createObjectURL(file),probe=new Image(),name=file.name||'imagen';
+  probe.onload=function(){
+    var w=probe.naturalWidth||0,h=probe.naturalHeight||0,big=Math.max(w,h)>2200&&!/svg/i.test(file.type);
+    if(big){ /* reduce imágenes enormes para que el giro vaya fluido */
+      try{
+        var k=2200/Math.max(w,h),c=document.createElement('canvas');
+        c.width=Math.round(w*k);c.height=Math.round(h*k);
+        c.getContext('2d').drawImage(probe,0,0,c.width,c.height);
+        c.toBlob(function(b){
+          if(!b){show(side,url,w,h,name);return;}
+          try{URL.revokeObjectURL(url);}catch(e){}
+          show(side,URL.createObjectURL(b),w,h,name);
+        },'image/jpeg',0.92);
+        return;
+      }catch(e){}
+    }
+    show(side,url,w,h,name);
+  };
+  probe.onerror=function(){try{URL.revokeObjectURL(url);}catch(e){}msg('No he podido leer «'+name+'». Prueba con otro PNG o JPG.',true);};
+  probe.src=url;
+}
+function restore(){
+  ['front','back'].forEach(function(s){
+    var o=st[s];if(o.url){try{URL.revokeObjectURL(o.url);}catch(e){}}
+    o.url=null;o.on=false;o.rot=0;
+    if(s==='front'){imgs.front.src=origFront;imgs.front.alt=origAlt;}
+    else{imgs.back.removeAttribute('src');}
+    layout(s);
+  });
+  imgs.back.style.display='';
+  ttl.textContent=origTtl;fit='cover';document.getElementById('bfit').textContent='Ajuste: rellenar';
+  msg('Diseño original restaurado.');
+}
+document.getElementById('inF').addEventListener('change',function(e){load(e.target.files[0],'front');go(-8,-22);e.target.value='';});
+document.getElementById('inB').addEventListener('change',function(e){load(e.target.files[0],'back');go(-8,158);e.target.value='';});
+document.getElementById('brot').onclick=function(){
+  var s=visible(),o=st[s];
+  if(!o.on){msg('Primero sube un diseño para la cara que estás viendo.',true);return;}
+  o.rot=(o.rot+90)%360;layout(s);
+};
+document.getElementById('bfit').onclick=function(){
+  fit=fit==='cover'?'contain':'cover';
+  this.textContent='Ajuste: '+(fit==='cover'?'rellenar':'completo');
+  layout('front');layout('back');
+};
+document.getElementById('bclr').onclick=restore;
+/* arrastrar y soltar (en cualquier punto de la página) y pegar */
+var depth=0;
+function hasFiles(e){var t=e.dataTransfer&&e.dataTransfer.types;return!!t&&Array.prototype.indexOf.call(t,'Files')>=0;}
+document.addEventListener('dragenter',function(e){if(hasFiles(e)){e.preventDefault();depth++;stage.classList.add('over');}});
+document.addEventListener('dragover',function(e){if(hasFiles(e)){e.preventDefault();}});
+document.addEventListener('dragleave',function(e){if(hasFiles(e)){depth=Math.max(0,depth-1);if(!depth)stage.classList.remove('over');}});
+document.addEventListener('drop',function(e){
+  if(!hasFiles(e))return;
+  e.preventDefault();depth=0;stage.classList.remove('over');
+  var f=e.dataTransfer.files&&e.dataTransfer.files[0];
+  if(f)load(f,visible());
+});
+document.addEventListener('paste',function(e){
+  var f=e.clipboardData&&e.clipboardData.files&&e.clipboardData.files[0];
+  if(f){e.preventDefault();load(f,visible());}
+});
+})();
+</script>
+
+</body></html>
