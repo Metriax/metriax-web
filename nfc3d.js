@@ -16,6 +16,7 @@ async function iniciar() {
   const cam = new THREE.PerspectiveCamera(28, 1, 1, 1000); cam.position.set(0, 0, 230);
   const luz = new THREE.DirectionalLight(0xffffff, 1.25); luz.position.set(-80, 120, 160); escena.add(luz);
   const luz2 = new THREE.DirectionalLight(0xffe8c8, 0.6); luz2.position.set(120, -40, 80); escena.add(luz2);
+  const borde = new THREE.DirectionalLight(0xE7C27A, 1.4); borde.position.set(60, 40, -160); escena.add(borde);
 
   // Tarjeta ISO CR80: 85,6 × 54 mm, canto redondeado de 3,18 mm
   const W = 85.6, H = 54, G = 0.9, R = 3.18;
@@ -89,7 +90,7 @@ async function iniciar() {
     tarjeta.rotation.x = -0.18 + Math.sin(t / 1700) * 0.08;
     tarjeta.rotation.z = Math.sin(t / 2300) * 0.05;
     tarjeta.position.y = Math.sin(t / 1100) * 1.6;
-    r.render(escena, cam); caja.style.setProperty("--sombra", (0.75 + Math.abs(Math.cos(ang)) * 0.25).toFixed(3));
+    r.render(escena, cam); 
     requestAnimationFrame(bucle);
   }
   caja.classList.add("lista"); requestAnimationFrame(bucle);

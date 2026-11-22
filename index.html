@@ -307,6 +307,40 @@ h1,h2,h3,p{margin:0}
   .hero .bajada{top:calc(100svh + 12svh - 210px)}
   .hero .acc{top:calc(100svh + 12svh - 104px)}
 }
+/* ===== Portada premium: texto a la izquierda, tarjeta NFC a la derecha ===== */
+.portada{position:relative;min-height:100svh;overflow:hidden;background:#101417;color:var(--cal);isolation:isolate}
+.p-fondo{position:absolute;inset:0;z-index:-1;background:
+  radial-gradient(60% 70% at 74% 42%,rgba(185,129,40,.26) 0%,rgba(185,129,40,.08) 38%,rgba(185,129,40,0) 70%),
+  radial-gradient(55% 60% at 8% 100%,rgba(150,43,35,.38) 0%,rgba(150,43,35,0) 70%),
+  radial-gradient(120% 90% at 50% 0%,#1F262A 0%,#141a1d 45%,#0d1113 100%)}
+.p-fondo::before{content:"";position:absolute;inset:0;opacity:.09;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.p-fondo::after{content:"";position:absolute;left:var(--m);right:var(--m);top:72px;height:1px;background:linear-gradient(90deg,rgba(185,129,40,0),rgba(185,129,40,.45),rgba(185,129,40,0))}
+.p-grid{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);align-items:center;gap:clamp(16px,3vw,48px);min-height:calc(100svh - 26svh);padding:calc(72px + 4svh) var(--m) 2svh}
+.p-texto{display:grid;gap:clamp(18px,2.4vw,28px);max-width:620px}
+.p-kicker{display:flex;align-items:center;gap:14px;font-weight:650;font-size:14px;letter-spacing:.16em;text-transform:uppercase;color:var(--ocre)}
+.p-kicker::before{content:"";width:36px;height:1px;background:currentColor}
+.portada .titular{position:static;transform:none;width:auto;text-align:left;font-size:clamp(64px,8.2vw,138px);color:var(--cal);margin:0}
+.portada .titular span{display:block;white-space:nowrap}
+.portada .titular .arriba{clip-path:none;color:inherit}
+.portada .titular .arriba span+span{color:transparent;background:linear-gradient(100deg,#E7C27A 0%,#B98128 45%,#E2B868 70%,#9C6A1E 100%);-webkit-background-clip:text;background-clip:text}
+.portada .bajada{position:static;transform:none;width:auto;max-width:44ch;text-align:left;color:#BFC4C0;font-size:clamp(17px,1.35vw,20px);line-height:1.55}
+.portada .acc{position:static;transform:none;display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-start}
+.portada .acc .btn{background:var(--granate);color:#fff}.portada .acc .btn:hover{background:#7E231C}
+.portada .acc .btn.lin{background:transparent;color:var(--cal);box-shadow:inset 0 0 0 1px rgba(222,224,221,.35)}
+.portada .acc .btn.lin:hover{background:rgba(222,224,221,.08)}
+.portada .nfc3d{position:relative;left:auto;right:auto;top:auto;height:min(62svh,560px);width:100%;z-index:1}
+.portada .nfc3d::before{content:"";position:absolute;left:50%;top:50%;width:70%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(231,194,122,.20),rgba(231,194,122,0));filter:blur(10px)}
+.portada .tira{position:relative;left:auto;right:auto;bottom:auto;height:24svh;margin:0 var(--m);display:grid;grid-template-columns:repeat(5,1fr);gap:4px;align-items:end;overflow:hidden;opacity:.9;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent);mask-image:linear-gradient(180deg,#000 55%,transparent)}
+.portada .tira img{width:100%;height:100%;object-fit:cover;object-position:top}
+.portada .tira img:nth-child(odd){height:84%}
+@media (max-width:900px){
+  .p-grid{grid-template-columns:1fr;min-height:0;padding-top:calc(72px + 6svh);gap:8px}
+  .portada .titular{font-size:clamp(56px,16vw,96px)}
+  .portada .nfc3d{height:min(44svh,380px)}
+  .portada .tira{grid-template-columns:repeat(3,1fr);height:18svh}
+  .portada .tira img:nth-child(n+4){display:none}
+}
+@media (max-width:420px){.portada .acc .btn{flex:1 1 auto;min-height:48px;padding:0 16px}}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 <script type="module" src="nfc3d.js"></script>
@@ -328,15 +362,17 @@ h1,h2,h3,p{margin:0}
 </header>
 
 <main id="arriba">
-<section class="hero" data-ink="#1C2124" aria-labelledby="h1">
-  <div class="campo-a"></div><div class="campo-b"></div>
-  <div class="nfc3d" aria-hidden="true"><canvas></canvas><i class="nfc-sombra"></i></div>
-  <h1 class="titular d" id="h1" style="--costura:56%">
-    <span class="capa arriba"><span>Tu sala,</span><span>en orden.</span></span>
-    <span class="capa abajo" aria-hidden="true"><span>Tu sala,</span><span>en orden.</span></span>
-  </h1>
-  <p class="bajada">Metriax conecta la mesa, la cocina, la barra y a tus camareros. El cliente pide con su móvil y tú ves el negocio en directo.</p>
-  <div class="acc"><a class="btn" href="#contacto">Pide presupuesto</a></div>
+<section class="portada" data-ink="#FFFFFF" aria-labelledby="h1">
+  <div class="p-fondo" aria-hidden="true"></div><div class="campo-b" hidden></div>
+  <div class="p-grid">
+    <div class="p-texto">
+      <p class="p-kicker">El sistema de sala para tu bar</p>
+      <h1 class="titular d" id="h1"><span class="capa arriba"><span>Tu sala,</span><span>en orden.</span></span></h1>
+      <p class="bajada">Metriax conecta la mesa, la cocina, la barra y a tus camareros. El cliente pide con su móvil y tú ves el negocio en directo.</p>
+      <div class="acc"><a class="btn" href="#contacto">Pide presupuesto</a><a class="btn lin" href="#recorrido">Cómo funciona</a></div>
+    </div>
+    <div class="nfc3d" aria-hidden="true"><canvas></canvas></div>
+  </div>
   <div class="tira" aria-hidden="true">
     <img src="img/m-carta.jpg" width="780" height="1688" alt="">
     <img src="img/m-mesa.jpg" width="780" height="1688" alt="">
