@@ -12,7 +12,7 @@ async function iniciar() {
   r.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 0.92;
   const escena = new THREE.Scene();
-  const pm = new THREE.PMREMGenerator(r); escena.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; escena.environmentIntensity = 0.45;
+  const pm = new THREE.PMREMGenerator(r); escena.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; escena.environmentIntensity = 0.6;
   const cam = new THREE.PerspectiveCamera(28, 1, 1, 1000); cam.position.set(0, 0, 230);
   const luz = new THREE.DirectionalLight(0xffffff, 1.25); luz.position.set(-80, 120, 160); escena.add(luz);
   const luz2 = new THREE.DirectionalLight(0xffe8c8, 0.6); luz2.position.set(120, -40, 80); escena.add(luz2);
@@ -21,7 +21,7 @@ async function iniciar() {
   // Tarjeta ISO CR80: 85,6 × 54 mm, canto redondeado de 3,18 mm
   const W = 85.6, H = 54, G = 0.9, R = 3.18;
   const tarjeta = new THREE.Group(); escena.add(tarjeta);
-  const canto = new THREE.MeshPhysicalMaterial({ color: 0x1c2124, roughness: 0.35, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.2 });
+  const canto = new THREE.MeshPhysicalMaterial({ color: 0xC9A04E, roughness: 0.28, metalness: 0.85, clearcoat: 0.6, clearcoatRoughness: 0.2 });
   tarjeta.add(new THREE.Mesh(new RoundedBoxGeometry(W, H, G, 6, R), canto));
   // caras: rectángulo redondeado con la textura
   const forma = new THREE.Shape(); const x = -W / 2, y = -H / 2;
@@ -36,9 +36,9 @@ async function iniciar() {
 
   // Diseños de prueba: fondo, tinta y acento
   const DIS = [
-    { fondo: "#1C2124", tinta: "#EEF0ED", acento: "#B98128", rojo: "#962B23", canto: 0x1c2124 },
-    { fondo: "#962B23", tinta: "#FFFFFF", acento: "#E7B35A", rojo: "#561510", canto: 0x7e231c },
-    { fondo: "#EEF0ED", tinta: "#1C2124", acento: "#B98128", rojo: "#962B23", canto: 0xd2d5d1 },
+    { fondo: "#EEF0ED", tinta: "#1C2124", acento: "#B98128", rojo: "#962B23", canto: 0xC9A04E },
+    { fondo: "#962B23", tinta: "#FFFFFF", acento: "#E7B35A", rojo: "#561510", canto: 0xC9A04E },
+    { fondo: "#2A3338", tinta: "#EEF0ED", acento: "#D9A956", rojo: "#962B23", canto: 0xC9A04E },
   ];
   const tex = (dib) => { const c = document.createElement("canvas"); c.width = 1712; c.height = 1080; dib(c.getContext("2d"), c.width, c.height);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = r.capabilities.getMaxAnisotropy(); return t; };
