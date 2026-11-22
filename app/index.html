@@ -745,7 +745,8 @@ html.staff:not(.cliente) .p-side nav button:hover{background:rgba(255,255,255,.0
 html.staff:not(.cliente) .p-side nav button[aria-current="page"]{background:#fff;color:#1d1d1f}
 html.staff:not(.cliente) .p-side .abajo,html.staff:not(.cliente) .p-side .abajo a,html.staff:not(.cliente) .p-side .marca span{color:#a1a1a6;font-family:var(--ui);font-size:13px}
 html.staff:not(.cliente) .panel.admin .p-side .marca b{font-family:"Syne",var(--display);font-weight:800;font-size:26px;letter-spacing:-.05em;color:#fff;text-shadow:none}
-html.staff:not(.cliente) .panel.admin .p-side .marca b::after{content:"";display:inline-block;width:6px;height:6px;margin-left:2px;border-radius:50%;background:linear-gradient(180deg,#fff,#a7a9b0);transform:translateY(-13px)}
+html.staff:not(.cliente) .panel.admin .p-side .marca b{display:flex;align-items:center;gap:.36em}
+html.staff:not(.cliente) .panel.admin .p-side .marca b::before{content:"";width:1.15em;height:1.15em;flex:none;border-radius:.3em;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8.5' fill='white'/%3E%3Cpath d='M11.68 12.06A5 5 0 0 1 11.68 19.94M14.39 8.59A9.4 9.4 0 0 1 14.39 23.41M17.10 5.13A13.8 13.8 0 0 1 17.10 26.87' stroke='black' stroke-width='2.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat}
 html.staff:not(.cliente) .panel.admin .p-cab h1{color:#1d1d1f}
 html.staff:not(.cliente) .panel.admin{--rojo:#1d1d1f;--rojo-osc:#000;--amarillo:#1d1d1f}
 /* tarjetas, tablas y botones */
@@ -754,6 +755,22 @@ html.staff:not(.cliente) .pant:hover{transform:translateY(-2px)}
 html.staff:not(.cliente) input,html.staff:not(.cliente) select,html.staff:not(.cliente) textarea{border-radius:12px}
 html.staff:not(.cliente) input:focus,html.staff:not(.cliente) select:focus,html.staff:not(.cliente) textarea:focus{outline:none;border-color:#1d1d1f;box-shadow:0 0 0 4px rgba(0,0,0,.08)}
 html.staff:not(.cliente) :focus-visible{outline:2px solid #0071e3;outline-offset:3px}
+
+/* Avisos (solicitudes de la web) en el panel maestro */
+.sol-filtros{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:12px;align-items:end;padding:14px 16px;margin-top:14px}
+.sol-filtros label{display:grid;gap:5px;font-size:13px;font-weight:600;color:var(--tinta-2)}
+.sol-filtros .campo{width:100%;min-height:42px}
+@media (max-width:900px){.sol-filtros{grid-template-columns:1fr 1fr}}
+.peq-sel{min-height:34px;padding:4px 8px;font-size:13px;border-radius:10px}
+tr.sol-nueva td:first-child{box-shadow:inset 3px 0 0 var(--critico)}
+tr.sol-nueva td{font-weight:600}
+tr.sol-det td{background:var(--papel)}
+.sol-det-in{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:6px 2px}
+.sol-det-in small{display:block;font-size:12px;font-weight:700;color:var(--tinta-3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.sol-det-in p{margin:0;white-space:pre-wrap}
+.sol-notas{display:grid;gap:10px}.sol-notas textarea{width:100%;min-height:90px;font-family:var(--ui);font-size:14px;padding:10px 12px}
+html.staff:not(.cliente) table.datos th{background:#fafafa;color:var(--tinta-3)}
+@media (max-width:760px){.sol-det-in{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -772,6 +789,6 @@ html.staff:not(.cliente) :focus-visible{outline:2px solid #0071e3;outline-offset
   <div class="v-pie"><span>Gíralo con el dedo. En el móvil, «Ponerlo en mi mesa» abre la cámara.</span><span>Modelo de muestra: el definitivo saldrá del escaneo del plato real.</span></div>
 </dialog>
 
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>

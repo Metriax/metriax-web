@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Metriiax · Tarjetas NFC y carta digital para bares y restaurantes</title>
 <meta name="description" content="Diseñamos una tarjeta NFC única para cada local y la conectamos a tu carta digital. El cliente acerca el móvil y el pedido llega a cocina y al camarero.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%231d1d1f%22/%3E%3Ctext x=%2216%22 y=%2222%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2218%22 fill=%22white%22 text-anchor=%22middle%22%3Em%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8.5' fill='%231d1d1f'/%3E%3Cpath d='M11.68 12.06A5 5 0 0 1 11.68 19.94M14.39 8.59A9.4 9.4 0 0 1 14.39 23.41M17.10 5.13A13.8 13.8 0 0 1 17.10 26.87' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Playfair+Display:ital,wght@0,700;0,900;1,900&family=Shrikhand&family=Bebas+Neue&family=Monoton&family=Pacifico&family=Cinzel:wght@600;800&family=Bungee&family=Abril+Fatface&display=swap">
@@ -57,7 +57,9 @@ p{margin:0}
 /* NAV */
 nav.top{position:sticky;top:0;z-index:40;background:rgba(245,245,247,.72);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--line)}
 nav.top .wrap{display:flex;align-items:center;gap:22px;height:56px}
-.logo{font-family:'Syne',var(--display);font-weight:800;font-size:24px;letter-spacing:-.05em;text-decoration:none;display:inline-flex;align-items:baseline;gap:2px}
+.logo{font-family:'Syne',var(--display);font-weight:800;font-size:24px;letter-spacing:-.05em;text-decoration:none;display:inline-flex;align-items:center;gap:.36em;line-height:1}
+.logo .lm{width:1.2em;height:1.2em;flex:none;border-radius:.3em;box-shadow:0 1px 2px rgba(0,0,0,.12),0 6px 14px -6px rgba(0,0,0,.35)}
+.logo span{transform:translateY(-.04em)}
 .logo i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--silver);box-shadow:0 0 0 1px rgba(0,0,0,.25);transform:translateY(-12px)}
 nav.top .links{display:flex;gap:26px;margin-left:auto;font-size:13px}
 nav.top .links a{text-decoration:none;color:var(--ink);opacity:.8}
@@ -376,6 +378,31 @@ body.cur-on #cur,body.cur-on #cur2{opacity:1}
 #cur2.big{width:70px;height:70px;margin:-35px 0 0 -35px;background:rgba(255,255,255,.15)}
 @media (pointer:coarse),(prefers-reduced-motion:reduce){#cur,#cur2{display:none}}
 @media (prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}.ln>span,.hero .lead,.hero .ctas,.hero .eyebrow{animation:none}}
+
+/* PIE en bloques */
+footer{padding:72px 0 0;overflow:hidden}
+footer .wrap.fgrid{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:14px;align-items:stretch}
+footer .ft{display:flex;flex-direction:column;gap:10px;background:#111113;border:1px solid rgba(255,255,255,.08);border-radius:26px;padding:28px;min-height:250px;color:#a1a1a6;font-size:15px;text-decoration:none;transition:border-color .25s,transform .25s,background .25s}
+footer .ft h4{margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#6e6e73}
+footer .ft a{color:#d2d2d7;text-decoration:none;width:fit-content}footer .ft a:hover{color:#fff}
+footer .ft-brand{--lm-in:#000;justify-content:space-between;background:radial-gradient(120% 90% at 0% 0%,#232326 0%,#111113 60%)}
+footer .ft-brand .logo{font-size:40px;color:#f5f5f7}
+footer .ft-brand p{margin:0;max-width:36ch;line-height:1.5}
+footer .ft-cta.btn{background:#f5f5f7;color:#000;width:fit-content;margin-top:6px}
+footer .ft-cta.btn:hover{background:#fff}
+footer .ft-acc{background:#f5f5f7;color:#1d1d1f;justify-content:space-between;aspect-ratio:1/1;min-height:0}
+footer .ft-acc:hover{transform:translateY(-4px);background:#fff}
+footer .ft-acc b{display:block;font-size:22px;letter-spacing:-.03em;color:#000}
+footer .ft-acc small{display:block;margin-top:4px;color:#6e6e73;font-size:13px;line-height:1.4}
+footer .ft-ico{width:52px;height:52px;border-radius:15px;background:#000;color:#fff;display:grid;place-items:center}
+footer .ft-ico svg{width:24px;height:24px}
+footer .ft-arr{align-self:flex-end;width:44px;height:44px;border-radius:50%;background:#000;color:#fff;display:grid;place-items:center;font-size:20px;transition:transform .25s}
+footer .ft-acc:hover .ft-arr{transform:translateX(4px)}
+footer .fbar{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:26px;padding-bottom:10px;font-size:13px;color:#6e6e73}
+footer .fbar a{color:#a1a1a6;text-decoration:none}footer .fbar a:hover{color:#fff}
+footer .fgiant{font-family:'Syne',var(--display);font-weight:800;letter-spacing:-.06em;font-size:clamp(64px,15.5vw,250px);line-height:.8;text-align:center;margin-top:10px;background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,0) 85%);-webkit-background-clip:text;background-clip:text;color:transparent;user-select:none;white-space:nowrap}
+@media (max-width:980px){footer .wrap.fgrid{grid-template-columns:1fr 1fr}footer .ft-brand{grid-column:1/-1;min-height:0;gap:22px}}
+@media (max-width:560px){footer .wrap.fgrid{grid-template-columns:1fr}footer .ft{min-height:0}footer .ft-acc{aspect-ratio:auto;gap:22px}}
 </style>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
@@ -385,7 +412,7 @@ body.cur-on #cur,body.cur-on #cur2{opacity:1}
 
 <nav class="top" aria-label="Principal">
   <div class="wrap">
-    <a class="logo" href="#inicio" aria-label="metriiax, inicio">metriiax<i></i></a>
+    <a class="logo" href="#inicio" aria-label="metriiax, inicio"><svg class="lm" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8.5" fill="currentColor"/><path d="M11.68 12.06A5 5 0 0 1 11.68 19.94M14.39 8.59A9.4 9.4 0 0 1 14.39 23.41M17.10 5.13A13.8 13.8 0 0 1 17.10 26.87" stroke="var(--lm-in,#fff)" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg><span>metriiax</span></a>
     <div class="links">
       <a href="#como">Cómo funciona</a>
       <a href="#equipo">Paneles</a>
@@ -567,23 +594,43 @@ body.cur-on #cur,body.cur-on #cur2{opacity:1}
             <div class="f full"><label for="q-msg">¿Algo más que debamos saber?</label><textarea id="q-msg" name="mensaje" placeholder="Terraza, varias plantas, idiomas, horarios…"></textarea></div>
       <div class="formmsg" id="formMsg" role="status" aria-live="polite"></div>
       <button class="btn btn-blue" type="submit">Enviar solicitud</button>
-      <p class="note" style="margin:0">Se abrirá tu correo con todo escrito para enviarlo a hola@metriiax.com.</p>
+      <p class="note envnote" style="margin:0">Tus datos solo los usamos para contactarte sobre esta visita.</p>
+      <input type="text" name="web" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
       <div class="done" id="done">
-        <strong>Solicitud preparada</strong>
+        <strong>¡Solicitud enviada!</strong>
         <pre id="doneText"></pre>
-        <div class="row"><button class="btn btn-line" type="button" id="copyBtn">Copiar solicitud</button><button class="btn btn-line" type="button" id="newBtn">Enviar otra</button></div>
-        <span class="note">Se ha abierto tu correo con la solicitud escrita para <a href="mailto:hola@metriiax.com">hola@metriiax.com</a>: solo tienes que pulsar Enviar. Si no se abre, copia la solicitud y mándala a esa dirección.</span>
+        <div class="row"><button class="btn btn-line" type="button" id="copyBtn" style="display:none">Copiar solicitud</button><button class="btn btn-line" type="button" id="newBtn">Enviar otra</button></div>
+        <span class="note">La hemos recibido. Te llamamos en los próximos días para quedar y visitarte.</span>
       </div>
     </form>
   </div>
 </section>
 
 <footer>
-  <div class="wrap">
-    <span class="logo">metriiax<i></i></span>
-    <span>Tarjetas NFC y carta digital para hostelería · Hecho en Extremadura · © 2026</span>
-    <nav aria-label="Pie"><a href="#como">Cómo funciona</a><a href="#disenos">Diseños</a><a href="#proceso">Cómo trabajamos</a><a href="#presupuesto">Contacto</a><a href="/acceso/">Acceder</a></nav>
+  <div class="wrap fgrid">
+    <div class="ft ft-brand">
+      <a class="logo" href="#inicio" aria-label="metriiax, inicio"><svg class="lm" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8.5" fill="currentColor"/><path d="M11.68 12.06A5 5 0 0 1 11.68 19.94M14.39 8.59A9.4 9.4 0 0 1 14.39 23.41M17.10 5.13A13.8 13.8 0 0 1 17.10 26.87" stroke="var(--lm-in,#fff)" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg><span>metriiax</span></a>
+      <p>Tarjetas NFC y carta digital para bares y restaurantes. El cliente acerca el móvil y el pedido llega solo a cocina y al camarero.</p>
+      <a class="btn ft-cta" href="#presupuesto">Solicitar una visita</a>
+    </div>
+    <nav class="ft" aria-label="Pie">
+      <h4>Producto</h4>
+      <a href="#como">Cómo funciona</a><a href="#disenos">Diseños</a><a href="#equipo">Paneles</a><a href="#proceso">Cómo trabajamos</a><a href="#faq">Preguntas</a>
+    </nav>
+    <div class="ft">
+      <h4>Contacto</h4>
+      <a href="mailto:hola@metriiax.com">hola@metriiax.com</a>
+      <span>Almendralejo · Extremadura</span>
+      <a href="#presupuesto">Pide una visita en tu local</a>
+    </div>
+    <a class="ft ft-acc" href="/acceso/">
+      <span class="ft-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+      <span><b>Acceso clientes</b><small>Panel del restaurante, sala, cocina y equipo metriiax</small></span>
+      <span class="ft-arr" aria-hidden="true">→</span>
+    </a>
   </div>
+  <div class="wrap fbar"><span>© 2026 metriiax · Hecho en Extremadura</span><a href="#inicio">Volver arriba ↑</a></div>
+  <div class="fgiant" aria-hidden="true">metriiax</div>
 </footer>
 
 <div class="zoom" id="zoom" role="dialog" aria-modal="true" aria-label="Tarjeta en grande">
@@ -621,7 +668,7 @@ if(!matchMedia('(prefers-reduced-motion:reduce)').matches){c.addEventListener('p
 
 <div class="app" id="app" aria-label="Panel">
   <aside>
-    <span class="logo">metriiax<i></i></span>
+    <span class="logo"><svg class="lm" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8.5" fill="currentColor"/><path d="M11.68 12.06A5 5 0 0 1 11.68 19.94M14.39 8.59A9.4 9.4 0 0 1 14.39 23.41M17.10 5.13A13.8 13.8 0 0 1 17.10 26.87" stroke="var(--lm-in,#fff)" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg><span>metriiax</span></span>
     <div class="who-card"><span class="avatar" id="whoAv">C</span><div><strong id="whoName">Carmen</strong><small id="whoSub">Bar La Parada</small></div></div>
     <nav id="appNav" aria-label="Secciones del panel"></nav>
     <div class="foot">
@@ -687,14 +734,20 @@ form.addEventListener('submit',function(e){
   if(d.email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)){fmsg.textContent='Revisa el correo: parece incompleto.';fmsg.className='formmsg err';return}
   fmsg.textContent='';fmsg.className='formmsg';
   $('#doneText').textContent='Solicitud de visita · metriiax\nNombre: '+d.nombre+'\nLocal: '+d.local+(d.ciudad?' ('+d.ciudad+')':'')+'\nMesas: '+(d.mesas||'sin indicar')+(d.telefono?'\nTeléfono: '+d.telefono:'')+(d.email?'\nCorreo: '+d.email:'')+(d.mensaje?'\nMensaje: '+d.mensaje:'');
-  var asunto='Solicitud de visita · '+d.local+(d.ciudad?' ('+d.ciudad+')':'');
-  location.href='mailto:hola@metriiax.com?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent($('#doneText').textContent);
-  done.classList.add('show');
+  if(form.querySelector('[name=web]').value){done.classList.add('show');return}
+  var btn=form.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='Enviando…';
+  fetch('https://nchhioxmgrdngrzkxzza.supabase.co/rest/v1/solicitudes',{method:'POST',headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jaGhpb3htZ3Jkbmdyemt4enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUwOTgwMDEsImV4cCI6MjExMDY3NDAwMX0.e4X335EXPQ47LscEdBz01e6e-z8p00vF7r0_WndF9ek','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jaGhpb3htZ3Jkbmdyemt4enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUwOTgwMDEsImV4cCI6MjExMDY3NDAwMX0.e4X335EXPQ47LscEdBz01e6e-z8p00vF7r0_WndF9ek','Content-Type':'application/json','Prefer':'return=minimal'},
+    body:JSON.stringify({nombre:d.nombre,local:d.local,ciudad:d.ciudad||null,mesas:d.mesas?Math.max(0,Math.min(999,parseInt(d.mesas,10)||0)):null,telefono:d.telefono||null,email:d.email||null,mensaje:d.mensaje||null})})
+  .then(function(r){btn.disabled=false;btn.textContent='Enviar solicitud';
+    if(!r.ok){return r.text().then(function(t){fmsg.textContent=/ya recibida/.test(t)?'Ya hemos recibido tu solicitud: te llamamos pronto.':'No se ha podido enviar. Inténtalo de nuevo en un momento o escríbenos a hola@metriiax.com.';fmsg.className='formmsg err'})}
+    done.classList.add('show');$$('.f,button[type=submit],.envnote',form).forEach(function(el){el.style.display='none'});
+  }).catch(function(){btn.disabled=false;btn.textContent='Enviar solicitud';fmsg.textContent='Sin conexión. Inténtalo de nuevo o escríbenos a hola@metriiax.com.';fmsg.className='formmsg err'});
+  return;
   leads.unshift({nombre:d.nombre,local:d.local,ciudad:d.ciudad||'—',mesas:+d.mesas||0,when:'ahora',nuevo:true,mine:true});
   $$('.f,button[type=submit]',form).forEach(function(el){el.style.display='none'});
 });
 $('#copyBtn').addEventListener('click',function(){var b=this;try{navigator.clipboard.writeText($('#doneText').textContent).then(function(){b.textContent='Copiada'},function(){b.textContent='No se pudo copiar'})}catch(x){b.textContent='No se pudo copiar'}});
-$('#newBtn').addEventListener('click',function(){form.reset();done.classList.remove('show');$('#copyBtn').textContent='Copiar solicitud';$$('.f,button[type=submit]',form).forEach(function(el){el.style.display=''});$('#q-nombre').focus()});
+$('#newBtn').addEventListener('click',function(){form.reset();done.classList.remove('show');$('#copyBtn').textContent='Copiar solicitud';$$('.f,button[type=submit],.envnote',form).forEach(function(el){el.style.display=''});$('#q-nombre').focus()});
 
 var login=$('#login'),loginRole='dueno',lastFocus=null;
 function openLogin(){lastFocus=document.activeElement;login.classList.add('show');setTimeout(function(){$('#l-email').focus()},30)}

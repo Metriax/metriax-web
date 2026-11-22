@@ -3077,6 +3077,52 @@ function registrarLocal(){
 }
 function VAdmin(){
   let tab="restaurantes", lista=null, cargando=false, sel=null, msgs=[], equipo=null, creado=null, canal=null, ultimaCarga=0;
+  // Avisos: solicitudes de visita que llegan desde el formulario de la web
+  let sols=null, solCarga=0, solAbierta=null; const fil={q:"",ciudad:"",estado:"",periodo:""};
+  const EST_SOL={nueva:["critico","Nueva"],contactada:["aviso","Contactada"],visita:["azul","Visita quedada"],cliente:["ok","Cliente"],descartada:["","Descartada"]};
+  async function cargarSols(){ solCarga=ahora();
+    if(Store.modo!=="supa"){ if(!sols) sols=[{id:"d1",creado:new Date(ahora()-36e5).toISOString(),nombre:"Lucía Gómez",local:"Bar El Puente",ciudad:"Almendralejo",mesas:14,telefono:"600 111 222",email:"",mensaje:"Tenemos terraza en verano.",estado:"nueva",notas:""},{id:"d2",creado:new Date(ahora()-3*864e5).toISOString(),nombre:"Pedro Ruiz",local:"Taberna La Plaza",ciudad:"Mérida",mesas:20,telefono:"",email:"pedro@ejemplo.es",mensaje:"",estado:"contactada",notas:"Llamar el lunes"}]; return; }
+    const {data,error}=await Store.sb.from("solicitudes").select("*").order("creado",{ascending:false}).limit(2000); if(!error) sols=data||[]; }
+  const normT=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+  function solsFiltradas(){ const q=normT(fil.q), lim={"7":7,"30":30,"90":90}[fil.periodo]; return (sols||[]).filter(x=>(!fil.estado||x.estado===fil.estado)&&(!fil.ciudad||normT(x.ciudad)===fil.ciudad)&&(!lim||new Date(x.creado).getTime()>ahora()-lim*864e5)&&(!q||normT([x.nombre,x.local,x.ciudad,x.telefono,x.email,x.mensaje,x.notas].join(" ")).includes(q))); }
+  function avisosV(){
+    if(!sols){ if(ahora()-solCarga>3000) cargarSols().then(()=>pintar(true)); return `<p class="vacio-ui">Cargando avisos…</p>`; }
+    const ciudades=[...new Map(sols.filter(x=>x.ciudad).map(x=>[normT(x.ciudad),x.ciudad.trim()])).entries()].sort((a,b)=>a[1].localeCompare(b[1],"es"));
+    const L=solsFiltradas(), nuevas=sols.filter(x=>x.estado==="nueva").length, mes=sols.filter(x=>new Date(x.creado).getTime()>ahora()-30*864e5).length;
+    const fecha=t=>new Date(t).toLocaleDateString("es-ES",{day:"numeric",month:"short"})+" · "+new Date(t).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
+    const opt=(v,t,cur)=>`<option value="${esc(v)}" ${cur===v?"selected":""}>${esc(t)}</option>`;
+    return `<div class="p-cab"><div><h1>Avisos</h1><p>Solicitudes de visita que llegan desde el formulario de la web.</p></div><button class="b-ui claro" data-sol-csv>Exportar a Excel (CSV)</button></div>
+      <div class="kpis">
+        <div class="card kpi"><small>Nuevas</small><strong style="color:${nuevas?"var(--critico)":"inherit"}">${nuevas}</strong><span class="d">sin atender</span></div>
+        <div class="card kpi"><small>Últimos 30 días</small><strong>${mes}</strong><span class="d">solicitudes</span></div>
+        <div class="card kpi"><small>Total</small><strong>${sols.length}</strong><span class="d">desde el inicio</span></div>
+        <div class="card kpi"><small>Ciudades</small><strong>${ciudades.length}</strong><span class="d">distintas</span></div>
+      </div>
+      <div class="card sol-filtros">
+        <label>Buscar<input class="campo" id="sf-q" value="${esc(fil.q)}" placeholder="Nombre, local, teléfono, correo…" autocomplete="off"></label>
+        <label>Ciudad / localidad<select class="campo" id="sf-ciudad">${opt("","Todas",fil.ciudad)}${ciudades.map(([k,n])=>opt(k,n,fil.ciudad)).join("")}</select></label>
+        <label>Estado<select class="campo" id="sf-estado">${opt("","Todos",fil.estado)}${Object.entries(EST_SOL).map(([k,[,n]])=>opt(k,n,fil.estado)).join("")}</select></label>
+        <label>Fecha<select class="campo" id="sf-periodo">${opt("","Siempre",fil.periodo)}${opt("7","Últimos 7 días",fil.periodo)}${opt("30","Últimos 30 días",fil.periodo)}${opt("90","Últimos 90 días",fil.periodo)}</select></label>
+        ${fil.q||fil.ciudad||fil.estado||fil.periodo?`<button class="b-ui claro peq-ui" data-sol-limpiar>Quitar filtros</button>`:""}
+      </div>
+      <p class="ayuda" style="margin:10px 2px">${L.length} de ${sols.length} solicitudes</p>
+      <div class="tabla-wrap"><table class="datos"><thead><tr><th>Fecha</th><th>Local</th><th>Contacto</th><th>Ciudad</th><th style="text-align:right">Mesas</th><th>Estado</th><th></th></tr></thead><tbody>
+      ${L.map(x=>`<tr${x.estado==="nueva"?' class="sol-nueva"':""}><td style="white-space:nowrap">${fecha(x.creado)}</td><td><b>${esc(x.local)}</b></td>
+        <td>${esc(x.nombre)}${x.telefono?`<br><a href="tel:${esc(x.telefono.replace(/\s/g,""))}">${esc(x.telefono)}</a>`:""}${x.email?`<br><a href="mailto:${esc(x.email)}">${esc(x.email)}</a>`:""}</td>
+        <td>${esc(x.ciudad||"—")}</td><td style="text-align:right">${x.mesas??"—"}</td>
+        <td><select class="campo peq-sel" data-sol-estado="${esc(x.id)}" aria-label="Estado de ${esc(x.local)}">${Object.entries(EST_SOL).map(([k,[,n]])=>opt(k,n,x.estado)).join("")}</select></td>
+        <td><button class="b-ui claro peq-ui" data-sol-ver="${esc(x.id)}">${solAbierta===x.id?"Cerrar":"Ver"}</button></td></tr>
+        ${solAbierta===x.id?`<tr class="sol-det"><td colspan="7"><div class="sol-det-in"><div><small>Mensaje</small><p>${x.mensaje?esc(x.mensaje):"<i>Sin mensaje</i>"}</p></div>
+          <form class="sol-notas" data-sol-notas="${esc(x.id)}"><label><small>Notas internas</small><textarea class="campo" name="notas" maxlength="2000" placeholder="Llamado el martes, quedamos el jueves…">${esc(x.notas||"")}</textarea></label><div class="acc-fila"><button class="b-ui" type="submit">Guardar notas</button><button class="b-ui claro" type="button" data-sol-borrar="${esc(x.id)}">Borrar solicitud</button></div></form></div></td></tr>`:""}`).join("")||`<tr><td colspan="7" class="vacio-ui">${sols.length?"Ninguna solicitud con estos filtros.":"Todavía no ha llegado ninguna solicitud desde la web."}</td></tr>`}
+      </tbody></table></div>`;
+  }
+  async function guardarSol(id,cambios){
+    if(Store.modo==="supa"){ const {error}=await Store.sb.from("solicitudes").update({...cambios,actualizado:new Date().toISOString()}).eq("id",id); if(error) throw error; }
+    sols=sols.map(x=>x.id===id?{...x,...cambios}:x);
+  }
+  function csvSols(){ const q=v=>`"${String(v??"").replace(/"/g,'""')}"`; const L=solsFiltradas();
+    const filas=[["fecha","local","nombre","telefono","correo","ciudad","mesas","estado","mensaje","notas"].join(";"),...L.map(x=>[new Date(x.creado).toLocaleString("es-ES"),x.local,x.nombre,x.telefono,x.email,x.ciudad,x.mesas,EST_SOL[x.estado]?.[1]||x.estado,x.mensaje,x.notas].map(q).join(";"))];
+    const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob(["\ufeff"+filas.join("\n")],{type:"text/csv;charset=utf-8"})); a.download="avisos-metriiax.csv"; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
   const enlace=(slug,h)=>location.href.split("#")[0].split("?")[0]+"?r="+slug+h;
   async function cargar(){
     if(cargando) return; cargando=true;
@@ -3154,13 +3200,16 @@ function VAdmin(){
     const ae=document.activeElement, escribiendo=ae&&ae.id==="resp-txt"?ae.value:null;
     if(!forzar && escribiendo===null && ae && app.contains(ae) && ae.matches("input:not([type=checkbox]):not([type=radio]),textarea,select")) return;
     const sinLeer=(lista||[]).reduce((a,r)=>a+(+r.chat_sin_leer||0),0);
-    const tabs=[["restaurantes","Restaurantes","chart"],["nuevo","Nuevo restaurante","door"],["soporte","Soporte","chat",sinLeer]];
-    const cuerpo={restaurantes:restaurantesV,nuevo:nuevoV,soporte:soporteV,ficha:fichaV}[tab]();
+    const nuevasSol=(sols||[]).filter(x=>x.estado==="nueva").length;
+    const tabs=[["restaurantes","Restaurantes","chart"],["avisos","Avisos","bell",nuevasSol],["nuevo","Nuevo restaurante","door"],["soporte","Soporte","chat",sinLeer]];
+    const cuerpo={restaurantes:restaurantesV,avisos:avisosV,nuevo:nuevoV,soporte:soporteV,ficha:fichaV}[tab]();
+    const foco=ae&&ae.id&&ae.id.startsWith("sf-")?{id:ae.id,pos:ae.selectionStart}:null;
     app.innerHTML=`<div class="panel admin"><aside class="p-side"><div class="marca"><b>${PLATAFORMA}</b><span>panel maestro</span></div>
       <nav aria-label="Secciones del panel maestro">${tabs.map(([k,t,i,b])=>`<button data-atab="${k}" aria-current="${tab===k||(k==="restaurantes"&&tab==="ficha")?"page":"false"}">${ico(i)}${t}${b?`<span class="b">${b}</span>`:""}</button>`).join("")}</nav>
       <div class="abajo"><a href="#inicio">← Pantallas de ${esc(TENANT)}</a>${Store.sesion?`<button class="b-ui claro" data-salir style="font-size:13px">Cerrar sesión (${esc(Store.sesion.user.email)})</button>`:""}<span>${modoBadge()}</span></div></aside>
       <main class="p-main">${cuerpo}</main></div>`;
     const l=app.querySelector("#chat-lista"); if(l) l.scrollTop=l.scrollHeight;
+    if(foco){ const i=app.querySelector("#"+foco.id); if(i){ i.focus(); try{ if(foco.pos!=null) i.setSelectionRange(foco.pos,foco.pos); }catch(_){} } }
     if(escribiendo!==null){ const i=app.querySelector("#resp-txt"); if(i){ i.value=escribiendo; i.focus(); } }
   }
   async function abrirChat(slug){ sel=slug; tab="soporte"; msgs=await Maestro.chat(slug).catch(()=>[]); pintar(true); await Maestro.leidos(slug,msgs).catch(()=>{}); lista=await Maestro.lista().catch(()=>lista); pintar(); }
@@ -3168,12 +3217,19 @@ function VAdmin(){
     const t=e.target;
     const tb=t.closest("[data-atab]"); if(tb){ tab=tb.dataset.atab; if(tab!=="nuevo") creado=null; pintar(true); return window.scrollTo(0,0); }
     const ch=t.closest("[data-chat]"); if(ch) return abrirChat(ch.dataset.chat);
+    const sv=t.closest("[data-sol-ver]"); if(sv){ solAbierta=solAbierta===sv.dataset.solVer?null:sv.dataset.solVer; return pintar(true); }
+    if(t.closest("[data-sol-limpiar]")){ fil.q=fil.ciudad=fil.estado=fil.periodo=""; return pintar(true); }
+    if(t.closest("[data-sol-csv]")) return csvSols();
+    const sb=t.closest("[data-sol-borrar]"); if(sb){ if(!confirm("¿Borrar esta solicitud para siempre?")) return; try{ if(Store.modo==="supa"){ const {error}=await Store.sb.from("solicitudes").delete().eq("id",sb.dataset.solBorrar); if(error) throw error; } sols=sols.filter(x=>x.id!==sb.dataset.solBorrar); solAbierta=null; toast("Solicitud borrada."); }catch(_){ toast("No se ha podido borrar."); } return pintar(true); }
     const fi=t.closest("[data-ficha]"); if(fi){ sel=fi.dataset.ficha; equipo=null; tab="ficha"; return pintar(true); }
     const es=t.closest("[data-estado]"); if(es){ const k=es.dataset.estado, nom={activo:"activo",aviso:"aviso de pago",suspendido:"suspendido",baja:"de baja"}[k];
       if((k==="suspendido"||k==="baja") && !confirm(`¿Seguro? ${es.dataset.slug} quedará ${nom}: su personal no podrá entrar y los clientes no podrán pedir.`)) return;
       try{ await Maestro.estado(es.dataset.slug,k,(app.querySelector("#fi-motivo")||{}).value||""); toast(`Estado cambiado: ${nom}.`); }catch(_){ toast("No se ha podido cambiar el estado."); } return cargar(); }
     const ac=t.closest("[data-activar]"); if(ac){ try{ await Maestro.activar(ac.dataset.activar,ac.dataset.valor==="1"); toast(ac.dataset.valor==="1"?"Servicio reactivado.":"Servicio pausado: no se aceptan pedidos."); }catch(_){ toast("No se ha podido cambiar."); } return cargar(); }
   }
+  async function cambioSol(e){ const t=e.target;
+    if(t.id&&t.id.startsWith("sf-")){ fil[t.id.slice(3)]=t.id==="sf-q"?t.value:t.value; return pintar(true); }
+    if(t.dataset.solEstado){ try{ await guardarSol(t.dataset.solEstado,{estado:t.value}); toast("Estado guardado."); }catch(_){ toast("No se ha podido guardar."); } return pintar(true); } }
   function cambio(e){ if(e.target.id==="nr-nombre"){ const s=app.querySelector("#nr-slug"); if(s && !s.dataset.tocado) s.value=slugDe(e.target.value); } if(e.target.id==="nr-slug") e.target.dataset.tocado=1; }
   async function enviar(e){
     e.preventDefault(); const f=e.target, v=id=>f.querySelector(id)?.value??"";
@@ -3185,18 +3241,20 @@ function VAdmin(){
       catch(err){ toast(err&&err.message==="carta"?"No se ha reconocido ningún plato en la carta pegada.":"No se ha podido crear el restaurante."); }
       return cargar();
     }
+    if(f.dataset.solNotas){ try{ await guardarSol(f.dataset.solNotas,{notas:f.querySelector("[name=notas]").value.trim()||null}); toast("Notas guardadas."); }catch(_){ toast("No se han podido guardar."); } return pintar(true); }
     if(f.id==="f-resp"){ const txt=v("#resp-txt").trim(); if(!txt||!sel) return; try{ await Maestro.responder(sel,txt,Store.sesion?.user?.email||"Soporte"); f.reset(); msgs=await Maestro.chat(sel); pintar(true); app.querySelector("#resp-txt")?.focus(); }catch(_){ toast("No se ha podido enviar."); } return; }
     if(f.id==="f-ficha"){ try{ await Maestro.notas(sel,{plan:v("#fi-plan"),notas:v("#fi-notas")}); toast("Ficha guardada."); }catch(_){ toast("No se ha podido guardar."); } return cargar(); }
     if(f.id==="f-eq-admin"){ try{ const {data,error}=await Store.sb.rpc("asignar_miembro",{p_tenant:sel,p_email:v("#ea-email").trim(),p_rol:v("#ea-rol")||null}); if(error) throw error; toast(data==="no_existe"?"No hay ninguna cuenta con ese correo: créala en Supabase › Authentication.":data==="quitado"?"Acceso quitado.":"Acceso actualizado."); equipo=null; pintar(true); }catch(_){ toast("No se ha podido aplicar."); } }
   }
-  app.addEventListener("click",clic); app.addEventListener("input",cambio); app.addEventListener("submit",enviar);
+  const cambioSel=e=>{ if(e.target.matches("select")) cambioSol(e); }, entradaSol=e=>{ if(e.target.id==="sf-q") cambioSol(e); };
+  app.addEventListener("click",clic); app.addEventListener("input",cambio); app.addEventListener("input",entradaSol); app.addEventListener("change",cambioSel); app.addEventListener("submit",enviar);
   // En vivo: con base de datos escucha los chats de todos; en modo demo, los cambios de otras pestañas
   if(Store.modo==="supa"){ canal=Store.sb.channel("maestro").on("postgres_changes",{event:"*",schema:"public",table:"docs",filter:"col=eq.chat"},()=>cargar()).subscribe(); }
-  registrarLocal(); cargar();
+  registrarLocal(); cargar(); cargarSols().then(()=>pintar());
   return { titulo:`Panel maestro · ${PLATAFORMA}`, pintar:()=>pintar(),
     alCambiar(){ if(ahora()-ultimaCarga>800) cargar(); },
-    tic(){ if(ahora()-ultimaCarga>(Store.modo==="supa"?20000:3000)) cargar(); },
-    salir(){ app.removeEventListener("click",clic); app.removeEventListener("input",cambio); app.removeEventListener("submit",enviar); if(canal) Store.sb.removeChannel(canal); } };
+    tic(){ if(ahora()-ultimaCarga>(Store.modo==="supa"?20000:3000)) cargar(); if(ahora()-solCarga>30000) cargarSols().then(()=>pintar()); },
+    salir(){ app.removeEventListener("input",entradaSol); app.removeEventListener("change",cambioSel); app.removeEventListener("click",clic); app.removeEventListener("input",cambio); app.removeEventListener("submit",enviar); if(canal) Store.sb.removeChannel(canal); } };
 }
 
 /* ===================================================================== */
