@@ -25,6 +25,18 @@
     <button type="button" class="btn lin" id="salir">Cerrar sesión</button>
   </section>
 
+  <form id="f-clave" novalidate hidden>
+    <p>Bienvenido. Crea tu contraseña para entrar (mínimo 10 caracteres).</p>
+    <label>Nueva contraseña
+      <input id="nueva" type="password" autocomplete="new-password" minlength="10" required>
+    </label>
+    <label>Repítela
+      <input id="nueva2" type="password" autocomplete="new-password" minlength="10" required>
+    </label>
+    <p id="error2" class="error" role="alert" hidden></p>
+    <button class="btn" type="submit" id="guardar">Guardar y entrar</button>
+  </form>
+
   <form id="f" novalidate>
     <label>Correo o usuario
       <input id="usuario" name="usuario" autocomplete="username" required>
@@ -37,6 +49,8 @@
     </label>
     <p id="error" class="error" role="alert" hidden></p>
     <button class="btn" type="submit" id="entrar">Entrar</button>
+    <button class="enlace" type="button" id="olvido">He olvidado mi contraseña</button>
+    <p id="aviso" class="aviso" role="status" hidden></p>
   </form>
 
   <p class="pie">¿Aún no trabajas con nosotros? <a href="/#contacto">Pide presupuesto</a> · <a href="mailto:hola@metriiax.com">hola@metriiax.com</a></p>

@@ -64,6 +64,29 @@
     mostrarSesion(true);
   });
 
+  // Invitación o recuperación: el enlace del correo trae la sesión en la dirección y hay que crear la contraseña
+  const vieneDeCorreo = /type=(invite|recovery|signup)/.test(location.hash);
+  function pedirClave(){ $("f").hidden=true; $("sesion").hidden=true; $("f-clave").hidden=false; }
+  sb.auth.onAuthStateChange(ev => { if(ev==="PASSWORD_RECOVERY") pedirClave(); });
+  $("f-clave").addEventListener("submit", async e => {
+    e.preventDefault(); const er=$("error2"); er.hidden=true;
+    const a=$("nueva").value, b=$("nueva2").value;
+    if(a.length<10){ er.textContent="La contraseña necesita al menos 10 caracteres."; er.hidden=false; return; }
+    if(a!==b){ er.textContent="Las dos contraseñas no coinciden."; er.hidden=false; return; }
+    $("guardar").disabled=true;
+    const { error:x } = await sb.auth.updateUser({ password:a });
+    $("guardar").disabled=false;
+    if(x){ er.textContent="No se ha podido guardar: "+x.message; er.hidden=false; return; }
+    history.replaceState(null,"",location.pathname); $("f-clave").hidden=true; mostrarSesion(true);
+  });
+  $("olvido").addEventListener("click", async () => {
+    const u=$("usuario").value.trim(); const av=$("aviso");
+    if(!u.includes("@")){ error("Escribe tu correo arriba y vuelve a pulsar."); return; }
+    error(""); await sb.auth.resetPasswordForEmail(u, { redirectTo: location.origin+"/acceso/" });
+    av.textContent="Si ese correo tiene cuenta, te llegará un enlace para crear una contraseña nueva."; av.hidden=false;
+  });
+
   $("salir").addEventListener("click", async () => { await sb.auth.signOut(); $("sesion").hidden=true; $("f").hidden=false; });
-  mostrarSesion(false);
+  if(vieneDeCorreo){ sb.auth.getSession().then(({data}) => { if(data.session) pedirClave(); else error("El enlace ha caducado. Pide otro a Metriax."); }); }
+  else mostrarSesion(false);
 })();
