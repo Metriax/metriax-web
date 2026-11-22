@@ -94,8 +94,11 @@
       history.replaceState(null,"",location.pathname);
       const s = data.session;
       if(!s) return mostrarSesion(false);
-      const yaTiene = s.user && s.user.user_metadata && s.user.user_metadata.clave_creada;
-      if(esRecuperacion || !yaTiene) pedirClave(); else mostrarSesion(true);
+      // Se pregunta al servidor (no a la copia guardada en el navegador) si ya tiene contraseña
+      sb.auth.getUser().then(({ data:d }) => {
+        const yaTiene = d && d.user && d.user.user_metadata && d.user.user_metadata.clave_creada;
+        if(esRecuperacion || !yaTiene) pedirClave(); else mostrarSesion(true);
+      });
     });
   }
   else mostrarSesion(false);
