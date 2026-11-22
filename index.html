@@ -403,6 +403,13 @@ footer .fbar a{color:#a1a1a6;text-decoration:none}footer .fbar a:hover{color:#ff
 footer .fgiant{font-family:'Syne',var(--display);font-weight:800;letter-spacing:-.06em;font-size:clamp(64px,15.5vw,250px);line-height:.8;text-align:center;margin-top:10px;background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,0) 85%);-webkit-background-clip:text;background-clip:text;color:transparent;user-select:none;white-space:nowrap}
 @media (max-width:980px){footer .wrap.fgrid{grid-template-columns:1fr 1fr}footer .ft-brand{grid-column:1/-1;min-height:0;gap:22px}}
 @media (max-width:560px){footer .wrap.fgrid{grid-template-columns:1fr}footer .ft{min-height:0}footer .ft-acc{aspect-ratio:auto;gap:22px}}
+
+.item.inv .grow .track{display:block;margin-top:6px;max-width:260px}
+.item .adj{display:inline-flex;gap:4px}
+.item .adj button{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:#fff;font-size:16px;line-height:1;cursor:pointer;color:var(--ink)}
+.item .adj button:hover{background:var(--bg)}
+.item.inv b{min-width:76px;text-align:right}
+@media (max-width:640px){.item.inv{flex-wrap:wrap}.item.inv .grow{flex-basis:100%}}
 </style>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
@@ -493,7 +500,7 @@ footer .fgiant{font-family:'Syne',var(--display);font-weight:800;letter-spacing:
         <div class="eyebrow">Un panel para cada uno</div>
         <h2>Cada persona entra y ve solo lo suyo.</h2>
       </div>
-      <p>El dueño controla ventas y carta, el camarero recibe los avisos de sus mesas y el equipo de metriiax gestiona todos los locales. Entra en la demo con cualquiera de los tres accesos.</p>
+      <p>El dueño controla ventas y carta, el camarero recibe los avisos de sus mesas y la administración lleva el inventario, los proveedores y los costes. Entra en la demo con cualquiera de los tres accesos.</p>
     </div>
     <div class="roles">
       <article class="role">
@@ -519,15 +526,15 @@ footer .fgiant{font-family:'Syne',var(--display);font-weight:800;letter-spacing:
         <button class="btn btn-ink" type="button" data-open-panel="camarero">Ver panel del camarero</button>
       </article>
       <article class="role">
-        <span class="who">Equipo metriiax</span>
-        <h3>Todos los locales</h3>
-        <p>Restaurantes, tarjetas en mesas, visitas pendientes y solicitudes que llegan desde la web.</p>
+        <span class="who">Administración del bar</span>
+        <h3>Inventario y costes</h3>
+        <p>Stock de cada producto con avisos de mínimos, pedidos a proveedores, coste y margen de cada plato y fichajes del personal.</p>
         <div class="mini">
-          <div class="r"><span>Locales activos</span><b>4</b></div>
-          <div class="r"><span>Tarjetas en mesas</span><b>120</b></div>
-          <div class="r"><span>Solicitudes nuevas</span><span class="pill blue">3</span></div>
+          <div class="r"><span>Pulpo</span><span class="pill alert">Bajo mínimo</span></div>
+          <div class="r"><span>Valor del almacén</span><b>624 €</b></div>
+          <div class="r"><span>Margen medio</span><b>63 %</b></div>
         </div>
-        <button class="btn btn-ink" type="button" data-open-panel="admin">Ver panel de metriiax</button>
+        <button class="btn btn-ink" type="button" data-open-panel="admin">Ver la administración</button>
       </article>
     </div>
     <div class="feats">
@@ -676,7 +683,7 @@ if(!matchMedia('(prefers-reduced-motion:reduce)').matches){c.addEventListener('p
       <div class="seg" role="group" aria-label="Rol de la demo">
         <button type="button" data-switch="dueno">Dueño</button>
         <button type="button" data-switch="camarero">Camarero</button>
-        <button type="button" data-switch="admin">metriiax</button>
+        <button type="button" data-switch="admin">Admin</button>
       </div>
       <button class="btn btn-line" type="button" id="logout">Salir a la web</button>
     </div>
@@ -763,7 +770,7 @@ var app=$('#app'),main=$('#appMain'),nav=$('#appNav'),role=null,tab=null,timer=n
 var ROLES={
   dueno:{name:'Carmen',sub:'Dueña · Bar La Parada',av:'C',tabs:[['resumen','Resumen'],['carta','Carta'],['mesas','Mesas']]},
   camarero:{name:'Juan',sub:'Camarero · turno de tarde',av:'J',tabs:[['avisos','Avisos'],['mesas','Mis mesas']]},
-  admin:{name:'Equipo metriiax',sub:'Superadmin',av:'M',tabs:[['general','General'],['locales','Locales'],['leads','Solicitudes']]}
+  admin:{name:'Carmen',sub:'Administración · Bar La Parada',av:'A',tabs:[['inventario','Inventario'],['proveedores','Proveedores'],['costes','Costes y márgenes'],['personal','Personal']]}
 };
 function go(r){location.hash='panel-'+r}
 function open(r){role=r;tab=ROLES[r].tabs[0][0];var R=ROLES[r];$('#whoName').textContent=R.name;$('#whoSub').textContent=R.sub;$('#whoAv').textContent=R.av;
@@ -777,6 +784,22 @@ $('#logout').addEventListener('click',function(){history.pushState(null,'',locat
 $$('[data-switch]').forEach(function(b){b.addEventListener('click',function(){go(b.getAttribute('data-switch'))})});
 $$('[data-open-panel]').forEach(function(b){b.addEventListener('click',function(){go(b.getAttribute('data-open-panel'))})});
 
+var inv=[
+  {n:'Pulpo',u:'kg',s:1.2,min:3,max:8,c:16.9,p:'Mariscos Atlántico'},
+  {n:'Gambas',u:'kg',s:2.4,min:2,max:6,c:14.5,p:'Mariscos Atlántico'},
+  {n:'Patatas',u:'kg',s:18,min:10,max:40,c:0.9,p:'Frutas Hnos. Díaz'},
+  {n:'Tomate',u:'kg',s:3,min:5,max:15,c:1.6,p:'Frutas Hnos. Díaz'},
+  {n:'Aceite de oliva virgen extra',u:'L',s:14,min:10,max:30,c:6.8,p:'Almazara Tierra de Barros'},
+  {n:'Jamón ibérico',u:'kg',s:4.1,min:2,max:6,c:38,p:'Ibéricos del Sur'},
+  {n:'Croquetas caseras',u:'ud',s:160,min:80,max:300,c:0.32,p:'Obrador propio'},
+  {n:'Barril de cerveza 30 L',u:'ud',s:3,min:2,max:6,c:62,p:'Distribuciones Guadiana'},
+  {n:'Vino tinto de la casa',u:'bot',s:9,min:12,max:48,c:3.9,p:'Distribuciones Guadiana'},
+  {n:'Pan',u:'ud',s:46,min:30,max:120,c:0.35,p:'Panadería San Antonio'}
+];
+var PROV={'Mariscos Atlántico':'Lunes y jueves · pedido antes de las 18:00','Frutas Hnos. Díaz':'Todos los días · 924 000 000','Almazara Tierra de Barros':'Cada 15 días','Ibéricos del Sur':'Bajo pedido','Obrador propio':'Se elabora en cocina','Distribuciones Guadiana':'Martes y viernes','Panadería San Antonio':'Reparto diario 8:30'};
+var esc_=[{n:'Pulpo a la brasa',c:6.1,p:16},{n:'Croquetas caseras (6)',c:1.9,p:8.5},{n:'Patatas bravas',c:1.2,p:5.5},{n:'Ensalada de tomate',c:2.4,p:7},{n:'Tabla de ibéricos',c:9.8,p:18},{n:'Gambas al ajillo',c:6.7,p:13.5}];
+var fich=[{n:'Carmen',r:'Encargada',e:'10:58',sal:'',pa:'0 min',t:'5 h 02 min'},{n:'Juan',r:'Sala',e:'16:02',sal:'',pa:'12 min',t:'3 h 46 min'},{n:'Rocío',r:'Sala',e:'12:00',sal:'16:30',pa:'15 min',t:'4 h 15 min'},{n:'Manolo',r:'Cocina',e:'11:30',sal:'',pa:'25 min',t:'4 h 35 min'},{n:'Ana',r:'Cocina',e:'12:00',sal:'17:00',pa:'10 min',t:'4 h 50 min'}];
+function fmt(n){return (Math.round(n*10)/10).toLocaleString('es-ES')}
 function bar(t){return '<div class="bar"><div style="display:flex;gap:12px;align-items:center"><button class="btn btn-ink menu-btn" type="button" data-menu style="padding:8px 14px">Menú</button><h2>'+t+'</h2></div><span class="demo-tag">Datos de ejemplo</span></div>'}
 function kpi(l,v,e){return '<div class="kpi"><small>'+l+'</small><b>'+v+'</b>'+(e?'<em>'+e+'</em>':'')+'</div>'}
 function pillEstado(s){return '<span class="pill '+(s==='Activo'?'ok':s==='Prueba'?'blue':'warn')+'">'+s+'</span>'}
@@ -793,10 +816,23 @@ function render(){
     if(tab==='avisos'){h=bar('Avisos de mis mesas')+'<div class="kpis">'+kpi('Avisos abiertos',avisos.length,'Mesas 1 a 10')+kpi('Llamadas',avisos.filter(function(a){return a.t==='call'}).length,'Prioridad alta')+kpi('Cuentas',avisos.filter(function(a){return a.t==='bill'}).length,'Pendientes de cobrar')+kpi('Pedidos',avisos.filter(function(a){return a.t==='order'}).length,'Por llevar')+'</div><div class="panel"><h3>En directo</h3><div class="feed" aria-live="polite">'+(avisos.length?avisos.map(function(a,i){return '<div class="alertc '+a.t+'"><span class="mesa">'+a.m+'</span><div>'+esc(a.txt)+'<small>Mesa '+a.m+' · '+esc(a.sub)+'</small></div><button type="button" data-ok="'+i+'">Atendido</button></div>'}).join(''):'<p class="empty">Todo atendido. Los avisos nuevos aparecen aquí solos.</p>')+'</div></div>'}
     else h=bar('Mis mesas · 1 a 10')+'<div class="panel"><h3>Turno de tarde</h3>'+tablesHtml(10)+'</div>';
   }else{
-    var act=locales.filter(function(l){return l.estado==='Activo'}),tj=locales.reduce(function(s,l){return s+l.mesas},0),nv=leads.filter(function(l){return l.nuevo}).length;
-    if(tab==='general')h=bar('General')+'<div class="kpis">'+kpi('Locales activos',act.length,'De '+locales.length+' dados de alta')+kpi('Tarjetas en mesas',tj,'Una por mesa')+kpi('Mesas por local',(tj/locales.length).toFixed(0),'De media')+kpi('Solicitudes nuevas',nv,'Sin responder')+'</div><div class="grid2"><div class="panel"><h3>Locales</h3>'+localesTbl(locales.slice(0,4))+'</div><div class="panel"><h3>Últimas solicitudes</h3><div class="items">'+leads.slice(0,4).map(leadItem).join('')+'</div></div></div>';
-    else if(tab==='locales')h=bar('Locales')+'<div class="panel"><h3>Todos los locales</h3>'+localesTbl(locales)+'</div>';
-    else h=bar('Solicitudes')+'<div class="panel"><h3>Solicitudes desde la web</h3><div class="items">'+leads.map(leadItem).join('')+'</div></div>';
+    var bajo=inv.filter(function(x){return x.s<x.min}),valor=inv.reduce(function(t,x){return t+x.s*x.c},0);
+    if(tab==='inventario'){
+      h=bar('Inventario')+'<div class="kpis">'+kpi('Productos',inv.length,'En el almacén')+kpi('Bajo mínimo',bajo.length,bajo.length?'Hay que pedir':'Todo en orden')+kpi('Valor del almacén',eur(valor),'A precio de compra')+kpi('Gastado esta semana',eur(1386.4),'En compras')+'</div>'+
+        '<div class="panel"><h3>Existencias</h3><p style="font-size:14px;color:var(--gray);margin:0 0 6px">Se descuenta solo con cada plato que sale de cocina. Usa − y + para ajustar un recuento.</p><div class="items">'+inv.map(function(x,i){var pct=Math.min(100,x.s/x.max*100),st=x.s<=0?['alert','Agotado']:x.s<x.min?['alert','Bajo mínimo']:x.s>x.max?['warn','Sobre máximo']:['ok','Correcto'];
+          return '<div class="item inv"><div class="grow">'+esc(x.n)+'<small>Mín. '+x.min+' · máx. '+x.max+' '+esc(x.u)+' · '+esc(x.p)+'</small><span class="track"><i style="width:'+pct.toFixed(0)+'%;'+(st[0]==='alert'?'background:var(--alert)':'')+'"></i></span></div><span class="pill '+st[0]+'">'+st[1]+'</span><b>'+fmt(x.s)+' '+esc(x.u)+'</b><span class="adj"><button type="button" data-inv="'+i+'" data-d="-1" aria-label="Restar '+esc(x.n)+'">−</button><button type="button" data-inv="'+i+'" data-d="1" aria-label="Sumar '+esc(x.n)+'">+</button></span></div>'}).join('')+'</div></div>';
+    }else if(tab==='proveedores'){
+      var provs={};inv.forEach(function(x){(provs[x.p]=provs[x.p]||[]).push(x)});
+      h=bar('Proveedores')+'<div class="kpis">'+kpi('Proveedores',Object.keys(provs).length,'Activos')+kpi('Pedidos sugeridos',Object.keys(provs).filter(function(k){return provs[k].some(function(x){return x.s<x.min})}).length,'Hasta el máximo')+kpi('Próxima entrega','Mañana','Mariscos Atlántico')+kpi('Pendiente de pago',eur(642.8),'2 facturas')+'</div><div class="grid2">'+
+        Object.keys(provs).map(function(k){var L=provs[k].filter(function(x){return x.s<x.min}),tot=L.reduce(function(t,x){return t+(x.max-x.s)*x.c},0);
+          return '<div class="panel"><h3>'+esc(k)+'</h3><p style="font-size:13px;color:var(--gray);margin:0 0 6px">'+esc(PROV[k]||'')+'</p><div class="items">'+(L.length?L.map(function(x){return '<div class="item"><div class="grow">'+esc(x.n)+'<small>Quedan '+fmt(x.s)+' '+esc(x.u)+'</small></div><b>+'+fmt(x.max-x.s)+' '+esc(x.u)+'</b></div>'}).join('')+'<div class="item"><div class="grow"><b style="font-family:inherit">Pedido sugerido</b></div><b>'+eur(tot)+'</b></div>':'<p class="empty">Nada que pedir ahora.</p>')+'</div></div>'}).join('')+'</div>';
+    }else if(tab==='costes'){
+      var mm=esc_.reduce(function(t,x){return t+(x.p-x.c)/x.p},0)/esc_.length*100;
+      h=bar('Costes y márgenes')+'<div class="kpis">'+kpi('Margen medio',mm.toFixed(0)+' %','Sobre precio de venta')+kpi('Coste medio por plato',eur(esc_.reduce(function(t,x){return t+x.c},0)/esc_.length),'Según receta')+kpi('Plato más rentable','Croquetas','78 % de margen')+kpi('A revisar',esc_.filter(function(x){return (x.p-x.c)/x.p<.6}).length,'Margen bajo 60 %')+'</div>'+
+        '<div class="panel"><h3>Escandallo de cada plato</h3><p style="font-size:14px;color:var(--gray);margin:0 0 6px">El coste sale de la receta y del último precio de compra de cada ingrediente.</p><div class="bars">'+esc_.map(function(x){var m=(x.p-x.c)/x.p*100;return '<div class="barrow"><span>'+esc(x.n)+' <small style="color:var(--gray)">· coste '+eur(x.c)+' · venta '+eur(x.p)+'</small></span><b>'+m.toFixed(0)+' %</b><span class="track"><i style="width:'+m.toFixed(0)+'%;'+(m<60?'background:var(--warn)':'')+'"></i></span></div>'}).join('')+'</div></div>';
+    }else{
+      h=bar('Personal')+'<div class="kpis">'+kpi('Trabajando ahora',fich.filter(function(f){return !f.sal}).length,'Han fichado hoy')+kpi('Horas hoy','22 h 28 min','Entre todos')+kpi('En pausa',1,'Juan · 12 min')+kpi('Registro guardado','4 años','Como pide la ley')+'</div><div class="panel"><h3>Fichajes de hoy</h3><div class="tbl"><table><thead><tr><th>Persona</th><th>Puesto</th><th>Entrada</th><th>Salida</th><th class="num">Pausas</th><th class="num">Trabajado</th></tr></thead><tbody>'+fich.map(function(f){return '<tr><td>'+esc(f.n)+'</td><td>'+esc(f.r)+'</td><td>'+f.e+'</td><td>'+(f.sal||'<span class="pill ok">Trabajando</span>')+'</td><td class="num">'+f.pa+'</td><td class="num">'+f.t+'</td></tr>'}).join('')+'</tbody></table></div></div>';
+    }
   }
   main.innerHTML=h;
 }
@@ -809,6 +845,7 @@ app.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)
   if(t.hasAttribute('data-tab')){tab=t.getAttribute('data-tab');app.classList.remove('nav-open');render();main.scrollTop=0}
   else if(t.hasAttribute('data-sw')){var c=carta[+t.getAttribute('data-sw')];c.on=!c.on;render()}
   else if(t.hasAttribute('data-ok')){avisos.splice(+t.getAttribute('data-ok'),1);render()}
+  else if(t.hasAttribute('data-inv')){var x=inv[+t.getAttribute('data-inv')],st=x.u==='kg'||x.u==='L'?0.5:x.u==='ud'&&x.max>50?10:1;x.s=Math.max(0,Math.round((x.s+st*(+t.getAttribute('data-d')))*10)/10);render()}
   else if(t.hasAttribute('data-menu'))app.classList.toggle('nav-open')});
 route();
 })();
