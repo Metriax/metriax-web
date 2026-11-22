@@ -315,7 +315,7 @@ h1,h2,h3,p{margin:0}
   radial-gradient(120% 90% at 50% 0%,#1F262A 0%,#141a1d 45%,#0d1113 100%)}
 .p-fondo::before{content:"";position:absolute;inset:0;opacity:.09;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 .p-fondo::after{content:"";position:absolute;left:var(--m);right:var(--m);top:72px;height:1px;background:linear-gradient(90deg,rgba(185,129,40,0),rgba(185,129,40,.45),rgba(185,129,40,0))}
-.p-grid{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);align-items:center;gap:clamp(16px,3vw,48px);min-height:calc(100svh - 26svh);padding:calc(72px + 4svh) var(--m) 2svh}
+.p-grid{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);align-items:center;gap:clamp(16px,3vw,48px);min-height:100svh;padding:calc(72px + 2svh) var(--m) 4svh}
 .p-texto{display:grid;gap:clamp(18px,2.4vw,28px);max-width:620px}
 .p-kicker{display:flex;align-items:center;gap:14px;font-weight:650;font-size:14px;letter-spacing:.16em;text-transform:uppercase;color:var(--ocre)}
 .p-kicker::before{content:"";width:36px;height:1px;background:currentColor}
@@ -372,13 +372,6 @@ h1,h2,h3,p{margin:0}
       <div class="acc"><a class="btn" href="#contacto">Pide presupuesto</a><a class="btn lin" href="#recorrido">Cómo funciona</a></div>
     </div>
     <div class="nfc3d" aria-hidden="true"><canvas></canvas></div>
-  </div>
-  <div class="tira" aria-hidden="true">
-    <img src="img/m-carta.jpg" width="780" height="1688" alt="">
-    <img src="img/m-mesa.jpg" width="780" height="1688" alt="">
-    <img src="img/m-avisos.jpg" width="780" height="1688" alt="">
-    <img src="img/m-sala.jpg" width="780" height="1688" alt="">
-    <img src="img/m-fichar.jpg" width="780" height="1688" alt="">
   </div>
 </section>
 
