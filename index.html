@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Metriax · El sistema de sala para tu bar</title>
+<meta name="description" content="Metriax conecta la mesa, la cocina, la barra y a tus camareros. El cliente pide con el móvil desde la mesa y tú ves el negocio en directo. Lo instalamos nosotros.">
+<meta name="theme-color" content="#1C2124">
+<link rel="preload" href="fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:"Archivo";src:url(fonts/archivo.woff2) format("woff2");font-weight:100 900;font-stretch:62% 125%;font-display:swap}
+:root{
+  --cal:#DEE0DD; --cal-2:#D2D5D1; --cara:#EEF0ED; --pizarra:#1C2124; --pizarra-2:#2A3236;
+  --granate:#962B23; --granate-hondo:#561510; --ocre:#B98128; --verdin:#2B6659; --azulp:#38536A;
+  --ink:var(--pizarra); --soft:#4D575B;
+  --m:clamp(16px,2.4vw,32px);
+  --xl:clamp(60px,10vw,150px); --l:clamp(34px,4vw,62px); --mid:clamp(22px,2.3vw,34px); --body:18px; --small:14px;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--cal);color:var(--ink);font:400 var(--body)/1.5 "Archivo",system-ui,sans-serif;font-synthesis:none;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+::selection{background:var(--granate);color:#fff}
+:focus-visible{outline:3px solid var(--ocre);outline-offset:3px}
+img{display:block;max-width:100%;height:auto}
+a{color:inherit;text-underline-offset:.2em;text-decoration-thickness:1px}
+h1,h2,h3,p{margin:0}
+.d{font-stretch:125%;font-weight:850;letter-spacing:-.03em;line-height:.88}
+.wrap{padding-left:var(--m);padding-right:var(--m)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:52px;padding:0 24px;border:0;border-radius:0;font:650 17px/1 "Archivo",system-ui,sans-serif;text-decoration:none;cursor:pointer;background:var(--granate);color:#fff;transition:transform .25s var(--ease),background .25s var(--ease)}
+.btn:hover{background:var(--granate-hondo)} .btn:active{transform:translateY(2px)}
+.btn.inv{background:var(--cal);color:var(--pizarra)} .btn.inv:hover{background:#fff}
+.btn.osc{background:var(--pizarra);color:var(--cal)} .btn.osc:hover{background:#000}
+
+/* ---------- cabecera: toma la tinta del capítulo que tiene debajo ---------- */
+.cab{position:fixed;inset:0 0 auto;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:20px;height:72px;padding:0 var(--m);color:var(--hink,var(--pizarra));background:var(--hbg,transparent);transition:color .3s var(--ease),background .3s var(--ease)}
+.marca{display:flex;align-items:center;gap:10px;text-decoration:none;font-stretch:125%;font-weight:850;font-size:20px;letter-spacing:-.02em}
+.marca svg{width:28px;height:28px}
+.cab nav{display:flex;align-items:center;gap:26px;font-weight:600;font-size:16px}
+.cab nav a:not(.btn){text-decoration:none;position:relative}
+.cab nav a:not(.btn)::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:2px;background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform .3s var(--ease)}
+.cab nav a:not(.btn):hover::after{transform:scaleX(1)}
+.cab .btn{min-height:44px;padding:0 18px;font-size:15px;background:var(--hbtn,var(--granate));color:var(--hbtnt,#fff)}
+.menu-m{display:none}
+
+/* ---------- hero: dos campos y una costura ---------- */
+.hero{position:relative;height:calc(100svh + 30svh);min-height:760px;background:var(--granate)}
+.hero .campo-a{position:absolute;inset:0 0 auto;height:calc((100svh)/2);min-height:380px;background:var(--cal)}
+.hero .campo-b{position:absolute;left:0;right:0;top:max(380px,50svh);bottom:0;background:var(--granate)}
+.titular{position:absolute;left:50%;top:max(380px,50svh);transform:translate(-50%,-71%);width:min(1240px,92vw);text-align:center;font-size:clamp(84px,11vw,168px);margin:0}
+.titular span{display:block;white-space:nowrap}
+.titular .capa{display:block}
+.titular .capa+.capa{position:absolute;inset:0}
+.titular .arriba{color:var(--granate);clip-path:inset(0 0 calc(100% - var(--costura)) 0)}
+.titular .abajo{color:var(--granate-hondo);clip-path:inset(var(--costura) 0 0 0)}
+.hero .bajada{position:absolute;left:50%;transform:translateX(-50%);top:calc(100svh - 168px);width:min(640px,88vw);text-align:center;color:#fff;font-size:20px;line-height:1.45}
+.hero .acc{position:absolute;left:50%;transform:translateX(-50%);top:calc(100svh - 76px);display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.hero .acc .btn{background:var(--cal);color:var(--pizarra)} .hero .acc .btn:hover{background:#fff}
+.hero .acc .btn.lin{background:#7E231C;color:#fff}
+.hero .acc .btn.lin:hover{background:var(--granate-hondo)}
+.hero .tira{position:absolute;left:var(--m);right:var(--m);bottom:0;height:24svh;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;align-items:end;overflow:hidden}
+.hero .tira img{width:100%;height:100%;object-fit:cover;object-position:top}
+.hero .tira img:nth-child(odd){height:84%}
+
+/* ---------- escaparate: índice de pantallas y escenario ---------- */
+.escaparate{display:grid;grid-template-columns:repeat(12,1fr);gap:0 24px;padding:160px var(--m) 0;background:var(--cal)}
+.escaparate .izq{grid-column:1 / span 5;padding-top:24px}
+.escaparate h2{font-size:var(--l);margin-bottom:28px}
+.indice{list-style:none;margin:0;padding:0}
+.indice button{display:block;width:100%;text-align:left;background:none;border:0;padding:6px 0;font:inherit;font-size:var(--l);font-weight:750;font-stretch:112%;letter-spacing:-.02em;line-height:1.1;color:#687174;cursor:pointer;transition:color .25s var(--ease),transform .35s var(--ease)}
+.indice button:hover{color:var(--pizarra);transform:translateX(6px)}
+.indice button[aria-pressed="true"]{color:var(--pizarra)}
+.indice small{display:block;font-size:16px;font-weight:450;font-stretch:100%;letter-spacing:0;color:var(--soft);max-height:0;overflow:hidden;transition:max-height .4s var(--ease),margin .4s var(--ease)}
+.indice button[aria-pressed="true"] small{max-height:120px;margin:6px 0 10px}
+.escenario{grid-column:7 / span 6;height:88svh;min-height:640px;background:var(--cal-2);position:relative;overflow:hidden}
+.escenario figure{position:absolute;margin:0;left:64px;top:72px;opacity:0;transform:translateY(16px);transition:opacity .35s var(--ease),transform .5s var(--ease);pointer-events:none}
+.escenario figure.on{opacity:1;transform:none}
+.escenario figure.movil img{width:360px}
+.escenario figure.ancho img{width:920px;max-width:none}
+.escenario figcaption{position:absolute;left:0;top:-40px;font-size:var(--small);font-weight:600;color:var(--soft)}
+
+/* ---------- cómo viaja un pedido: cuatro campos ---------- */
+.viaje{display:grid;grid-template-columns:repeat(4,1fr);margin-top:160px}
+.viaje .f{position:relative;min-height:84svh;padding:28px;display:flex;flex-direction:column;justify-content:space-between;color:#fff}
+.viaje .f:nth-child(1){background:var(--granate)} .viaje .f:nth-child(2){background:var(--ocre);color:var(--pizarra)} .viaje .f:nth-child(3){background:var(--verdin)} .viaje .f:nth-child(4){background:var(--azulp)}
+.viaje h2{font-size:var(--l)}
+.viaje .f>p{margin-top:auto;font-size:var(--mid);font-weight:650;line-height:1.15;letter-spacing:-.01em;max-width:17ch}
+.ticket{position:absolute;top:38%;left:50%;width:260px;transform:translate(-50%,-50%);background:var(--cara);color:var(--pizarra);padding:16px 16px 14px;font-size:15px;line-height:1.35;transition:transform .3s var(--ease);overflow:hidden}
+.viaje .f:hover .ticket{transform:translate(-50%,calc(-50% - 6px))}
+.ticket .t{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.ticket .t b{font-stretch:125%;font-weight:850;font-size:28px;letter-spacing:-.02em}
+.ticket ul{list-style:none;margin:0 0 10px;padding:0}
+.ticket li{display:flex;justify-content:space-between;gap:8px;font-weight:600}
+.ticket li .q{font-stretch:125%;font-weight:850;color:var(--granate);margin-right:6px}
+.ticket .e{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:650;padding-top:8px;border-top:1px solid #C8CCC7}
+.ticket .ok{color:var(--verdin)}
+.ticket .sep{font-size:12px;font-weight:700;letter-spacing:.08em;color:#5E676B;margin:4px 0 2px}
+.ticket .est{color:#8A5E14}
+
+/* ---------- capacidades con interruptor ---------- */
+.capac{background:var(--cal);padding-top:160px}
+.capac>h2{font-size:var(--l);padding:0 var(--m) 40px}
+.banda{display:grid;grid-template-columns:1fr auto;align-items:center;gap:24px;min-height:20vh;padding:24px var(--m);background:var(--cal);transition:background .45s var(--ease),color .45s var(--ease);color:#5F686B;cursor:pointer}
+.banda h3{font-size:var(--mid);font-weight:750;font-stretch:112%;letter-spacing:-.02em;line-height:1.1}
+.banda p{font-size:17px;max-width:62ch;max-height:0;overflow:hidden;opacity:0;transition:max-height .45s var(--ease),opacity .35s,margin .45s var(--ease)}
+.banda.on{color:#fff} .banda.on p{max-height:120px;opacity:1;margin-top:10px}
+.banda.on:nth-of-type(1){background:var(--granate)} .banda.on:nth-of-type(2){background:var(--verdin)} .banda.on:nth-of-type(3){background:var(--ocre);color:var(--pizarra)} .banda.on:nth-of-type(4){background:var(--azulp)} .banda.on:nth-of-type(5){background:var(--pizarra)}
+.interr{width:2.2em;height:1.15em;font-size:40px;border:0;padding:0;background:#BFC4C0;position:relative;cursor:pointer;transition:background .3s var(--ease);flex:none}
+.interr::after{content:"";position:absolute;top:.12em;left:.12em;width:.91em;height:.91em;background:var(--cara);transition:transform .35s var(--ease)}
+.banda.on .interr{background:rgba(255,255,255,.28)} .banda.on .interr::after{transform:translateX(1.05em);background:#fff}
+
+/* ---------- instalación: un cartel ---------- */
+.instal{background:var(--pizarra);color:var(--cal);padding:140px var(--m) 120px}
+.instal h2{font-size:var(--l);color:var(--ocre);margin-bottom:56px}
+.instal ol{list-style:none;margin:0;padding:0}
+.instal li{display:flex;justify-content:space-between;align-items:baseline;gap:24px;transition:color .25s var(--ease)}
+.instal li b{font-size:clamp(54px,8.6vw,132px);font-weight:850;font-stretch:100%;letter-spacing:-.035em;line-height:.95;text-transform:uppercase}
+.instal li span{font-size:19px;font-weight:550;color:#AEB5B8;text-align:right;white-space:nowrap}
+.instal li:hover{color:var(--ocre)}
+.instal .nota{margin-top:64px;max-width:60ch;font-size:19px;color:#C9CED0}
+
+/* ---------- panel con forma de baldosa ---------- */
+.sobre{padding:20px;background:var(--cal)}
+.sobre .panel{position:relative;background:var(--azulp);color:#fff;min-height:96svh;overflow:hidden;display:grid;grid-template-columns:repeat(12,1fr);gap:0 24px;padding:56px}
+.sobre h2{grid-column:1 / span 6;font-size:var(--l);color:#DDE6EC;max-width:11ch}
+.sobre .lobulo{position:absolute;left:56px;bottom:-8vw;width:44vw;max-width:700px;aspect-ratio:1;
+  -webkit-mask:radial-gradient(circle at 50% 25%,#000 0 25%,transparent 25.3%),radial-gradient(circle at 75% 50%,#000 0 25%,transparent 25.3%),radial-gradient(circle at 50% 75%,#000 0 25%,transparent 25.3%),radial-gradient(circle at 25% 50%,#000 0 25%,transparent 25.3%),linear-gradient(#000 0 0) 25% 25%/50% 50% no-repeat; /* taste-skill-ignore: máscara de lóbulos, no relleno */
+  mask:radial-gradient(circle at 50% 25%,#000 0 25%,transparent 25.3%),radial-gradient(circle at 75% 50%,#000 0 25%,transparent 25.3%),radial-gradient(circle at 50% 75%,#000 0 25%,transparent 25.3%),radial-gradient(circle at 25% 50%,#000 0 25%,transparent 25.3%),linear-gradient(#000 0 0) 25% 25%/50% 50% no-repeat} /* taste-skill-ignore: máscara de lóbulos, no relleno */
+.sobre .lobulo img,.sobre .lobulo video{width:100%;height:100%;object-fit:cover;object-position:78% 50%;transform:scale(1.05);animation:deriva 18s ease-in-out infinite alternate}
+@keyframes deriva{to{transform:scale(1.14) translateY(-3%)}}
+.sobre .textos{grid-column:8 / span 4;display:grid;gap:64px;align-content:start;padding-top:8px}
+.sobre h3{font-size:20px;font-weight:700;margin-bottom:10px}
+.sobre .textos p{font-size:17px;color:#E4EBEF}
+.sobre .btn{justify-self:start;background:var(--cal);color:var(--pizarra)}
+.sobre .btn.osc{background:var(--pizarra);color:var(--cal)}
+
+/* ---------- preguntas ---------- */
+.faq{display:grid;grid-template-columns:repeat(12,1fr);gap:0 24px;padding:180px var(--m) 180px}
+.faq h2{grid-column:1 / span 4;font-size:var(--l);position:sticky;top:96px;align-self:start}
+.faq .lista{grid-column:5 / span 8;display:grid;gap:8px}
+.faq details{background:var(--cara);transition:background .3s var(--ease),color .3s}
+.faq summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:20px;min-height:76px;padding:18px 24px;font-size:20px;font-weight:600;cursor:pointer}
+.faq summary::-webkit-details-marker{display:none}
+.faq .mas{position:relative;width:16px;height:16px;flex:none}
+.faq .mas::before,.faq .mas::after{content:"";position:absolute;left:0;top:6.5px;width:16px;height:3px;background:currentColor;transition:transform .3s var(--ease)}
+.faq .mas::after{transform:rotate(90deg)}
+.faq details[open]{background:var(--verdin);color:#fff}
+.faq details[open] .mas::after{transform:rotate(0)}
+.faq details p{padding:0 24px 24px;max-width:56ch;font-size:17px}
+
+/* ---------- contacto ---------- */
+.contacto{background:var(--granate);color:#fff;padding:48px 0 96px;overflow:hidden}
+.marquesina{display:flex;gap:8px;width:max-content;animation:marq 60s linear infinite}
+.marquesina img{height:150px;width:auto;object-fit:cover}
+.marquesina img.c{width:150px} .marquesina img.a{width:225px;object-position:top left}
+@keyframes marq{to{transform:translateX(-50%)}}
+.contacto h2{font-size:var(--l);margin:72px var(--m) 14px}
+.contacto .sub{margin:0 var(--m) 40px;font-size:20px;max-width:56ch;color:#F6E3E0}
+.barra3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 var(--m)}
+.barra3 input,.barra3 button{height:96px;border:0;border-radius:0;font:500 19px "Archivo",system-ui,sans-serif;text-align:center;color:#fff;background:#7E231C;transition:background .25s var(--ease)}
+.barra3 input::placeholder{color:#F0CFCB}
+.barra3 input:focus{background:#fff;color:var(--pizarra);outline:none}
+.barra3 button{background:var(--cal);color:var(--pizarra);font-weight:700;cursor:pointer}
+.barra3 button:hover{background:#fff}
+.letra{margin:12px var(--m) 0;font-size:14px;color:#F3D9D5}
+.letra a{color:#fff}
+.pend{background:rgba(0,0,0,.25);padding:1px 6px}
+
+/* ---------- pie: la marca, en baldosas ---------- */
+.pie{background:var(--pizarra);color:var(--cal);padding:80px var(--m) 32px}
+.bloques{display:block;width:100%;height:auto}
+.bloques text{font:850 128px "Archivo",sans-serif;font-stretch:125%;fill:#1C2124}
+.bloques .bl{transition:transform .5s var(--ease);transform-box:fill-box}
+.bloques .bl:hover{transform:translateY(-8px)}
+.pie .cols{display:grid;grid-template-columns:repeat(12,1fr);gap:24px;margin-top:56px;font-size:15px}
+.pie .cols div{grid-column:span 2;display:grid;gap:8px;align-content:start}
+.pie .cols div.ct{grid-column:9 / span 4}
+.pie .cols b{font-weight:700;color:#fff}
+.pie .cols a{text-decoration:none;color:#C9CED0} .pie .cols a:hover{color:#fff}
+.pie .ult{display:flex;justify-content:space-between;align-items:center;margin-top:64px;font-size:14px;color:#9AA3A6}
+.pie .ult .btn{min-height:40px;font-size:14px;padding:0 16px}
+
+/* ---------- entradas ---------- */
+.js .sube{opacity:0;transform:translateY(24px)}
+.js .sube.in{opacity:1;transform:none;transition:opacity .7s var(--ease),transform .9s var(--ease);transition-delay:var(--dl,0ms)}
+
+@media (max-width:1000px){
+  .escaparate{grid-template-columns:1fr;padding-top:120px}
+  .escaparate .izq,.escenario{grid-column:1}
+  .indice{display:flex;flex-wrap:wrap;gap:4px 18px}
+  .indice button{font-size:22px;white-space:nowrap}
+  .indice small{display:none}
+  .escenario{height:70svh;min-height:520px;margin-top:16px}
+  .escenario figure{left:50%;top:56px;transform:translate(-50%,16px)}
+  .escenario figure.on{transform:translateX(-50%)}
+  .escenario figure.ancho{left:16px;transform:translateY(16px)}
+  .escenario figure.ancho.on{transform:none}
+  .escenario figure.movil img{width:300px}
+  .escenario figure.ancho img{width:760px}
+  .viaje{grid-template-columns:1fr}
+  .viaje .f{min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center;padding:56px 28px}
+  .viaje .f h2{grid-column:1 / -1}
+  .ticket{position:relative;left:auto;top:auto;transform:none;width:100%;max-width:300px;justify-self:end}
+  .viaje .f:hover .ticket{transform:translateY(-6px)}
+  .viaje .f>p{order:-1}
+  .sobre .panel{grid-template-columns:1fr;padding:32px 24px 0;min-height:0}
+  .sobre h2,.sobre .textos{grid-column:1}
+  .sobre .textos{gap:32px;margin-top:32px}
+  .sobre .lobulo{position:relative;left:auto;bottom:auto;width:86vw;margin:40px auto -21vw;order:3}
+  .sobre .textos{order:2}
+  .faq{grid-template-columns:1fr;padding:120px var(--m)}
+  .faq h2{position:static;grid-column:1;margin-bottom:24px}
+  .faq .lista{grid-column:1}
+  .barra3{grid-template-columns:1fr}
+  .barra3 input,.barra3 button{height:60px}
+  .pie .cols div{grid-column:span 6}.pie .cols div.ct{grid-column:1 / -1}
+}
+@media (max-width:760px){
+  .cab nav a:not(.btn){display:none}
+  .menu-m{display:inline-flex}
+  .titular{font-size:15vw}
+  .hero{height:calc(100svh + 22svh);min-height:640px}
+  .hero .bajada{font-size:16px;top:calc(100svh - 210px)}
+  .hero .acc{top:calc(100svh - 104px)}
+  .hero .acc .btn{min-height:46px}
+  .hero .tira{grid-template-columns:repeat(3,1fr);height:18svh}
+  .hero .tira img:nth-child(n+4){display:none}
+  .banda{min-height:132px}
+  .viaje .f{grid-template-columns:1fr}
+  .ticket{justify-self:start}
+  .interr{font-size:30px}
+  .instal li{flex-direction:column;gap:4px;margin-bottom:22px}
+  .instal li b{font-size:11.5vw}
+  .instal li span{text-align:left;font-size:15px}
+
+}
+@media (prefers-reduced-motion:reduce){
+  .sobre .lobulo video{display:none}
+  .sobre .lobulo{background:url(video/camarero-bucle.jpg) center/cover}
+  *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+  .js .sube{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<header class="cab" id="cab">
+  <a class="marca" href="#arriba" aria-label="Metriax, inicio">
+    <svg viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" fill="currentColor"/><path d="M0 0h14A14 14 0 0 1 0 14z" fill="#962B23"/><path d="M28 28H14A14 14 0 0 1 28 14z" fill="#962B23"/><path d="M28 0v7a7 7 0 0 1-7-7z" fill="#B98128"/><path d="M0 28v-7a7 7 0 0 1 7 7z" fill="#B98128"/></svg>
+    Metriax
+  </a>
+  <nav aria-label="Principal">
+    <a href="#pantallas">Pantallas</a>
+    <a href="#viaje">Cómo funciona</a>
+    <a href="#instalacion">Instalación</a>
+    <a href="#preguntas">Preguntas</a>
+    <a class="btn" href="#contacto">Pide presupuesto</a>
+  </nav>
+</header>
+
+<main id="arriba">
+<section class="hero" data-ink="#1C2124" aria-labelledby="h1">
+  <div class="campo-a"></div><div class="campo-b"></div>
+  <h1 class="titular d" id="h1" style="--costura:56%">
+    <span class="capa arriba"><span>Tu sala,</span><span>en orden.</span></span>
+    <span class="capa abajo" aria-hidden="true"><span>Tu sala,</span><span>en orden.</span></span>
+  </h1>
+  <p class="bajada">Metriax conecta la mesa, la cocina, la barra y a tus camareros. El cliente pide con su móvil y tú ves el negocio en directo.</p>
+  <div class="acc"><a class="btn" href="#contacto">Pide presupuesto</a><a class="btn lin" href="https://metriax-demo.vercel.app" rel="noopener">Ver la demo</a></div>
+  <div class="tira" aria-hidden="true">
+    <img src="img/m-carta.jpg" width="780" height="1688" alt="">
+    <img src="img/m-mesa.jpg" width="780" height="1688" alt="">
+    <img src="img/m-avisos.jpg" width="780" height="1688" alt="">
+    <img src="img/m-sala.jpg" width="780" height="1688" alt="">
+    <img src="img/m-fichar.jpg" width="780" height="1688" alt="">
+  </div>
+</section>
+
+<section class="escaparate" id="pantallas" data-ink="#1C2124" aria-labelledby="h-pant">
+  <div class="izq">
+    <h2 class="d sube" id="h-pant">Una pantalla para cada sitio</h2>
+    <ul class="indice" role="list">
+      <li><button type="button" data-p="0" aria-pressed="true" class="sube" style="--dl:60ms">La carta<small>En el móvil del cliente, en español, inglés y portugués, con fotos y los 14 alérgenos.</small></button></li>
+      <li><button type="button" data-p="1" aria-pressed="false" class="sube" style="--dl:120ms">La mesa<small>Acerca el móvil a la tarjeta NFC: pide, llama al camarero, pide la cuenta y valora.</small></button></li>
+      <li><button type="button" data-p="2" aria-pressed="false" class="sube" style="--dl:180ms">Cocina y barra<small>Cada una recibe solo lo suyo, con el tiempo que lleva cada comanda.</small></button></li>
+      <li><button type="button" data-p="3" aria-pressed="false" class="sube" style="--dl:240ms">El camarero<small>Avisos con sonido, «Yo me encargo», tomar nota y cobrar desde el móvil.</small></button></li>
+      <li><button type="button" data-p="4" aria-pressed="false" class="sube" style="--dl:300ms">Tu panel<small>La sala en vivo, la caja, el inventario y el ranking de tu equipo.</small></button></li>
+    </ul>
+  </div>
+  <div class="escenario" data-ui>
+    <figure class="movil on"><figcaption>Carta · móvil del cliente</figcaption><img src="img/m-carta.jpg" width="780" height="1688" alt="Carta digital de Tres Hermanos en un móvil, con secciones, platos más pedidos y filtro de alérgenos"></figure>
+    <figure class="movil"><figcaption>Mesa 2 · móvil del cliente</figcaption><img src="img/m-mesa.jpg" width="780" height="1688" alt="Pantalla de la mesa 2: cuenta pedida con tarjeta, pedido en preparación y botones para llamar al camarero" loading="lazy"></figure>
+    <figure class="ancho"><figcaption>Cocina · tablet</figcaption><img src="img/cocina.jpg" width="2880" height="1800" alt="Pantalla de cocina con las comandas nuevas y en preparación de cada mesa" loading="lazy"></figure>
+    <figure class="movil"><figcaption>Camarero · móvil</figcaption><img src="img/m-avisos.jpg" width="780" height="1688" alt="Avisos del camarero: mesas que llaman y piden la cuenta, con el botón Yo me encargo" loading="lazy"></figure>
+    <figure class="ancho"><figcaption>Panel · sala en vivo</figcaption><img src="img/panel-sala.jpg" width="2880" height="1800" alt="Panel del dueño con el plano de mesas en baldosas y su estado en directo" loading="lazy"></figure>
+  </div>
+</section>
+
+<section class="viaje" id="viaje" aria-labelledby="h-viaje">
+  <div class="f" data-ink="#FFFFFF">
+    <h2 class="d sube" id="h-viaje">Un pedido</h2>
+    <div class="ticket" data-ui style="--q:#962B23"><div class="t"><b>Mesa 7</b><span>21:04</span></div><ul><li><span><b class="q">2×</b>Caña</span></li><li><span><b class="q">1×</b>Croquetas de jamón</span></li></ul><div class="e"><span>Enviado desde la mesa</span><span>0:00</span></div></div>
+    <p class="sube">Primero, la mesa pide desde el móvil.</p>
+  </div>
+  <div class="f" data-ink="#1C2124">
+    <div class="ticket" data-ui style="--q:#B98128"><div class="t"><b>Mesa 7</b><span>3:12</span></div><p class="sep">BARRA</p><ul><li><span><b class="q">2×</b>Caña</span><span class="ok">Lista</span></li></ul><p class="sep">COCINA</p><ul><li><span><b class="q">1×</b>Croquetas de jamón</span><span>En marcha</span></li></ul><div class="e"><span>Cada uno ve lo suyo</span><span>Ana confirmó</span></div></div>
+    <p class="sube">Luego, cocina y barra lo preparan.</p>
+  </div>
+  <div class="f" data-ink="#FFFFFF">
+    <div class="ticket" data-ui style="--q:#2B6659"><div class="t"><b>Mesa 7</b><span>8:40</span></div><ul><li><span><b class="q">2×</b>Caña</span><span class="ok">Servido</span></li><li><span><b class="q">1×</b>Croquetas de jamón</span><span class="ok">Servido</span></li></ul><div class="e"><span>«Yo me encargo» · Sara</span><span>Llamada 0:21</span></div></div>
+    <p class="sube">Después, alguien se encarga de la mesa.</p>
+  </div>
+  <div class="f" data-ink="#FFFFFF">
+    <div class="ticket" data-ui style="--q:#38536A"><div class="t"><b>Mesa 7</b><span>Cerrada</span></div><ul><li><span><b class="q">2×</b>Caña</span><span>3,60 €</span></li><li><span><b class="q">1×</b>Croquetas de jamón</span><span>5,80 €</span></li></ul><div class="e"><span>Cobrado con tarjeta · 9,40 €</span><span class="est">5 de 5 · Sara</span></div></div>
+    <p class="sube">Y tú lo ves todo, en caja y en el ranking.</p>
+  </div>
+</section>
+
+<section class="capac" data-ink="#1C2124" aria-labelledby="h-capac">
+  <h2 class="d sube" id="h-capac">Enciende lo que necesitas</h2>
+  <div class="banda on" data-ink="#FFFFFF"><div><h3>Que pidan desde la mesa, sin app.</h3><p>Tarjeta NFC o código QR en cada mesa. Carta con fotos, alérgenos y tres idiomas; también pago con tarjeta y pedidos para llevar.</p></div><button class="interr" type="button" role="switch" aria-checked="true" aria-label="Pedidos desde la mesa"></button></div>
+  <div class="banda" data-ink="#1C2124"><div><h3>Que cualquiera coja cualquier mesa.</h3><p>Sin repartir mesas: quien pulsa «Yo me encargo» se queda la mesa y el cliente ve su nombre. El ranking cuenta mesas y estrellas de cada camarero.</p></div><button class="interr" type="button" role="switch" aria-checked="false" aria-label="Mesas sin asignar y ranking"></button></div>
+  <div class="banda on" data-ink="#1C2124"><div><h3>Que la cocina vea solo lo suyo.</h3><p>La comanda se parte sola: los platos a cocina y la bebida a barra, con el tiempo de cada una e impresión de tickets.</p></div><button class="interr" type="button" role="switch" aria-checked="true" aria-label="Cocina y barra separadas"></button></div>
+  <div class="banda" data-ink="#1C2124"><div><h3>Que el equipo fiche con su usuario.</h3><p>Entrada, pausas y salida desde una pantalla aparte, con el registro de jornada que pide la ley guardado cuatro años.</p></div><button class="interr" type="button" role="switch" aria-checked="false" aria-label="Fichaje del personal"></button></div>
+  <div class="banda" data-ink="#1C2124"><div><h3>Que nadie toque la caja a escondidas.</h3><p>Un registro que nadie del local puede borrar: quién bajó una cuenta, anuló un pedido o cobró sin forma de pago, y cuándo.</p></div><button class="interr" type="button" role="switch" aria-checked="false" aria-label="Control antifraude"></button></div>
+</section>
+
+<section class="instal" id="instalacion" data-ink="#DEE0DD" aria-labelledby="h-inst">
+  <h2 class="d sube" id="h-inst">Lo montamos nosotros</h2>
+  <ol>
+    <li class="sube"><b>Tu carta</b><span>con fotos, precios y alérgenos</span></li>
+    <li class="sube"><b>Tus mesas</b><span>el plano de tu sala, por zonas</span></li>
+    <li class="sube"><b>Tarjetas NFC</b><span>una en cada mesa, grabada</span></li>
+    <li class="sube"><b>Tablets</b><span>y móviles, si no tienes</span></li>
+    <li class="sube"><b>Formación</b><span>a tu equipo, en tu local</span></li>
+  </ol>
+  <p class="nota sube">Llegamos con el sistema preparado con tu marca, lo dejamos funcionando en tu sala y enseñamos a tu equipo a usarlo.</p>
+</section>
+
+<section class="sobre" data-ink="#1C2124" aria-labelledby="h-sobre">
+  <div class="panel" data-ink="#FFFFFF">
+    <h2 class="d sube" id="h-sobre">Hecho para la sala de un bar</h2>
+    <div class="lobulo"><video src="video/camarero-bucle.mp4" poster="video/camarero-bucle.jpg" muted loop playsinline autoplay preload="metadata" aria-label="Avisos de mesa apilándose en el móvil del camarero"></video></div>
+    <div class="textos">
+      <div class="sube"><h3>Sin apps que instalar</h3><p>El cliente usa la cámara o el NFC de su móvil. Tu equipo, el navegador de cualquier tablet o teléfono. Con avisos que suenan y botones grandes para usarlos con prisa.</p></div>
+      <div class="sube" style="--dl:90ms"><h3>Tu marca, no la nuestra</h3><p>Tu logo y tus colores en la carta, en la mesa y en el panel, con varios estilos para elegir. El cliente ve tu bar, no un programa.</p></div>
+      <div class="sube" style="--dl:180ms;display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="https://metriax-demo.vercel.app" rel="noopener">Ver la demo</a><a class="btn osc" href="video/metriax.mp4">Ver el vídeo (1:40)</a></div>
+    </div>
+  </div>
+</section>
+
+<section class="faq" id="preguntas" data-ink="#1C2124" aria-labelledby="h-faq">
+  <h2 class="d" id="h-faq">Lo que nos preguntan</h2>
+  <div class="lista">
+    <details name="faq" open><summary>¿El cliente tiene que instalar algo?<span class="mas" aria-hidden="true"></span></summary><p>No. Acerca el móvil a la tarjeta de su mesa (o escanea el código) y se abre tu carta en el navegador, sin crear cuenta.</p></details>
+    <details name="faq"><summary>¿Sustituye a mi TPV?<span class="mas" aria-hidden="true"></span></summary><p>No. Metriax organiza la sala, los pedidos y el equipo, y convive con tu TPV para la facturación.</p></details>
+    <details name="faq"><summary>¿Y si no tengo tablets ni móviles?<span class="mas" aria-hidden="true"></span></summary><p>Te los ponemos nosotros en la instalación: tablets para cocina y barra y móviles para la sala.</p></details>
+    <details name="faq"><summary>¿Se puede pagar con tarjeta desde la mesa?<span class="mas" aria-hidden="true"></span></summary><p>Sí, con pago online. Y si el cliente prefiere efectivo o datáfono, lo pide desde el móvil y le llega el aviso al camarero.</p></details>
+    <details name="faq"><summary>¿Cómo se reparten las mesas los camareros?<span class="mas" aria-hidden="true"></span></summary><p>No hay que repartirlas: todos ven todos los avisos y la mesa la lleva quien dice «Yo me encargo». Si preferís organizaros por zonas, lo hacéis entre vosotros.</p></details>
+    <details name="faq"><summary>¿Qué pasa con los datos de mis clientes?<span class="mas" aria-hidden="true"></span></summary><p>Cada restaurante solo ve sus datos. Incluimos textos de privacidad y cookies y firmamos contigo el contrato de encargado del tratamiento.</p></details>
+    <details name="faq"><summary>¿Cuánto cuesta?<span class="mas" aria-hidden="true"></span></summary><p>Depende de las mesas, de los dispositivos que necesites y de la instalación. Cuéntanos cómo es tu bar y te pasamos el presupuesto.</p></details>
+  </div>
+</section>
+
+<section class="contacto" id="contacto" data-ink="#FFFFFF" aria-labelledby="h-cont">
+  <div class="marquesina" aria-hidden="true">
+    <img class="c" src="img/m-carta2.jpg" alt=""><img class="a" src="img/panel-resumen.jpg" alt=""><img src="img/m-sala.jpg" alt=""><img class="a" src="img/barra.jpg" alt=""><img src="img/m-mesa.jpg" alt=""><img class="a" src="img/panel-rendimiento.jpg" alt=""><img class="c" src="img/m-avisos.jpg" alt=""><img class="a" src="img/panel-economia.jpg" alt="">
+    <img class="c" src="img/m-carta2.jpg" alt=""><img class="a" src="img/panel-resumen.jpg" alt=""><img src="img/m-sala.jpg" alt=""><img class="a" src="img/barra.jpg" alt=""><img src="img/m-mesa.jpg" alt=""><img class="a" src="img/panel-rendimiento.jpg" alt=""><img class="c" src="img/m-avisos.jpg" alt=""><img class="a" src="img/panel-economia.jpg" alt="">
+  </div>
+  <h2 class="d" id="h-cont">Pide presupuesto</h2>
+  <p class="sub">Dinos tu nombre y tu bar y te escribimos con un presupuesto según tus mesas y los dispositivos que necesites.</p>
+  <form class="barra3" id="form" novalidate>
+    <input id="f-nom" name="nombre" placeholder="Tu nombre" autocomplete="name" aria-label="Tu nombre" required>
+    <input id="f-bar" name="bar" placeholder="Tu bar y ciudad" aria-label="Tu bar y ciudad" required>
+    <button type="submit">Enviar por WhatsApp</button>
+  </form>
+  <div class="letra"><span id="f-msg" aria-live="polite">Abre WhatsApp con el mensaje escrito; solo tienes que enviarlo. O escríbenos a <a id="mail" href="#">correo</a>.</span></div>
+</section>
+</main>
+
+<footer class="pie" data-ink="#DEE0DD">
+  <svg class="bloques" viewBox="0 0 1000 300" role="img" aria-label="Metriax"><g class="bl"><rect x="0.0" y="0.0" width="137.7" height="300.0" fill="#962B23"/><text x="68.9" y="118.0" text-anchor="middle">M</text></g><g class="bl"><rect x="143.7" y="78.0" width="137.7" height="222.0" fill="#B98128"/><text x="212.6" y="196.0" text-anchor="middle">E</text></g><g class="bl"><rect x="287.4" y="36.0" width="137.7" height="264.0" fill="#2B6659"/><text x="356.3" y="154.0" text-anchor="middle">T</text></g><g class="bl"><rect x="431.1" y="102.0" width="137.7" height="198.0" fill="#38536A"/><text x="500.0" y="220.0" text-anchor="middle">R</text></g><g class="bl"><rect x="574.9" y="18.0" width="137.7" height="282.0" fill="#DEE0DD"/><text x="643.7" y="136.0" text-anchor="middle">I</text></g><g class="bl"><rect x="718.6" y="66.0" width="137.7" height="234.0" fill="#962B23"/><text x="787.4" y="184.0" text-anchor="middle">A</text></g><g class="bl"><rect x="862.3" y="0.0" width="137.7" height="300.0" fill="#B98128"/><text x="931.1" y="118.0" text-anchor="middle">X</text></g></svg>
+  <div class="cols">
+    <div><b>Producto</b><a href="#pantallas">Pantallas</a><a href="#viaje">Cómo funciona</a><a href="#instalacion">Instalación</a></div>
+    <div><b>Ayuda</b><a href="#preguntas">Preguntas</a><a href="https://metriax-demo.vercel.app" rel="noopener">Demo</a><a href="#contacto">Presupuesto</a></div>
+    <div><b>Legal</b><a href="https://metriax-demo.vercel.app/#aviso-legal" rel="noopener">Aviso legal</a><a href="https://metriax-demo.vercel.app/#privacidad" rel="noopener">Privacidad</a></div>
+    <div class="ct"><b>Contacto</b><span>WhatsApp: <span id="ct-wa" class="pend">[número pendiente]</span></span><span>Correo: <span id="ct-mail" class="pend">[correo pendiente]</span></span></div>
+  </div>
+  <div class="ult"><span>© 2026 Metriax · Sistema de sala para bares y restaurantes</span><a class="btn" href="#arriba">Volver arriba</a></div>
+</footer>
+
+<script>
+// Contacto de Metriax: rellena estos dos datos (WhatsApp con prefijo, sin espacios ni +; correo)
+const CONTACTO = { whatsapp: "", email: "" };
+
+document.documentElement.classList.add("js");
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+
+// datos de contacto visibles
+if(CONTACTO.whatsapp){ $("#ct-wa").textContent="+"+CONTACTO.whatsapp; $("#ct-wa").className=""; }
+if(CONTACTO.email){ $("#ct-mail").innerHTML=`<a href="mailto:${CONTACTO.email}">${CONTACTO.email}</a>`; $("#ct-mail").className=""; }
+const asunto="Presupuesto Metriax";
+$("#mail").href=CONTACTO.email?`mailto:${CONTACTO.email}?subject=${encodeURIComponent(asunto)}`:"#contacto";
+if(!CONTACTO.email) $("#mail").textContent="[correo pendiente]";
+
+// formulario: abre WhatsApp (o el correo) con el mensaje escrito
+$("#form").addEventListener("submit",e=>{
+  e.preventDefault();
+  const n=$("#f-nom").value.trim(), b=$("#f-bar").value.trim(), msg=$("#f-msg");
+  if(!n||!b){ msg.textContent="Escribe tu nombre y tu bar para preparar el mensaje."; (n?$("#f-bar"):$("#f-nom")).focus(); return; }
+  const texto=`Hola, soy ${n}, de ${b}. Quiero un presupuesto de Metriax para mi bar.`;
+  if(CONTACTO.whatsapp) window.open(`https://wa.me/${CONTACTO.whatsapp}?text=${encodeURIComponent(texto)}`,"_blank","noopener");
+  else if(CONTACTO.email) location.href=`mailto:${CONTACTO.email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(texto)}`;
+  else msg.textContent="Falta poner el número de WhatsApp y el correo de Metriax en la página.";
+});
+
+// escaparate: elegir pantalla
+const figs=$$(".escenario figure");
+$$(".indice button").forEach(b=>b.addEventListener("click",()=>{
+  $$(".indice button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+  figs.forEach((f,i)=>f.classList.toggle("on",i===+b.dataset.p));
+}));
+
+// interruptores
+$$(".banda").forEach(bd=>{
+  const sw=$(".interr",bd);
+  const set=v=>{ bd.classList.toggle("on",v); sw.setAttribute("aria-checked",v); bd.dataset.ink=v&&!bd.matches(":nth-of-type(3)")?"#FFFFFF":"#1C2124"; tinta(); };
+  bd.addEventListener("click",e=>{ if(e.target.closest("a")) return; set(!bd.classList.contains("on")); });
+  sw.addEventListener("keydown",e=>{ if(e.key===" "||e.key==="Enter"){ e.preventDefault(); set(!bd.classList.contains("on")); } });
+});
+
+// la cabecera toma la tinta del capítulo que tiene debajo
+const cab=$("#cab"), capas=$$("[data-ink]").filter(x=>x!==cab);
+function tinta(){
+  const y=36; let el=null;
+  for(const c of capas){ const r=c.getBoundingClientRect(); if(r.top<=y&&r.bottom>y) el=c; }
+  const ink=el?el.dataset.ink:"#1C2124";
+  let bgEl=document.elementFromPoint(innerWidth/2,y+40); let bg="transparent";
+  while(bgEl&&bgEl!==document.documentElement){ if(bgEl===cab){ bgEl=null; break; } const c=getComputedStyle(bgEl).backgroundColor; if(c&&c!=="rgba(0, 0, 0, 0)"&&c!=="transparent"){ bg=c; break; } bgEl=bgEl.parentElement; }
+  cab.style.setProperty("--hbg",scrollY<10?"transparent":bg);
+  cab.style.setProperty("--hink",ink);
+  const claro=ink!=="#1C2124";
+  cab.style.setProperty("--hbtn",claro?"#DEE0DD":"#962B23"); cab.style.setProperty("--hbtnt",claro?"#1C2124":"#fff");
+}
+addEventListener("scroll",tinta,{passive:true}); addEventListener("resize",tinta); tinta();
+
+// costura del titular: calcula dónde corta la línea
+function costura(){
+  const h=$(".titular"), r=h.getBoundingClientRect(), seam=$(".campo-b").getBoundingClientRect().top;
+  h.style.setProperty("--costura",Math.max(0,Math.min(100,(seam-r.top)/r.height*100))+"%");
+}
+costura(); addEventListener("resize",costura); document.fonts&&document.fonts.ready.then(costura);
+
+// entradas escalonadas, una vez
+const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target); } }),{rootMargin:"0px 0px -8% 0px"});
+$$(".sube").forEach((el,i)=>{ if(!el.style.getPropertyValue("--dl")) el.style.setProperty("--dl",(i%4)*70+"ms"); io.observe(el); });
+</script>
+</body>
+</html>
