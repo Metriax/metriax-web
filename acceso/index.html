@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acceder · Metriax</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1C2124">
+<link rel="stylesheet" href="/acceso/acceso.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
+<script src="/acceso/acceso.js" defer></script>
+</head>
+<body>
+<main class="caja">
+  <a class="marca" href="/" aria-label="Metriax, volver a la web">
+    <svg viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" fill="currentColor"/><path d="M0 0h14A14 14 0 0 1 0 14z" fill="#962B23"/><path d="M28 28H14A14 14 0 0 1 28 14z" fill="#962B23"/><path d="M28 0v7a7 7 0 0 1-7-7z" fill="#B98128"/><path d="M0 28v-7a7 7 0 0 1 7 7z" fill="#B98128"/></svg>
+    Metriax
+  </a>
+  <h1>Acceder</h1>
+  <p class="sub">Para restaurantes clientes y para el equipo de Metriax.</p>
+
+  <section id="sesion" hidden>
+    <p>Has iniciado sesión como <b id="quien"></b>.</p>
+    <div id="destinos" class="destinos"></div>
+    <button type="button" class="btn lin" id="salir">Cerrar sesión</button>
+  </section>
+
+  <form id="f" novalidate>
+    <label>Correo o usuario
+      <input id="usuario" name="usuario" autocomplete="username" required>
+    </label>
+    <label id="l-codigo">Código del restaurante <small>(solo si entras con usuario, no con correo)</small>
+      <input id="codigo" name="codigo" autocomplete="organization" placeholder="por ejemplo: tres-hermanos" pattern="[a-z0-9-]{2,40}">
+    </label>
+    <label>Contraseña
+      <input id="clave" name="clave" type="password" autocomplete="current-password" required>
+    </label>
+    <p id="error" class="error" role="alert" hidden></p>
+    <button class="btn" type="submit" id="entrar">Entrar</button>
+  </form>
+
+  <p class="pie">¿Aún no trabajas con nosotros? <a href="/#contacto">Pide presupuesto</a> · <a href="mailto:hola@metriiax.com">hola@metriiax.com</a></p>
+</main>
+</body>
+</html>
