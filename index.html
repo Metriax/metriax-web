@@ -84,7 +84,16 @@ nav.top .btn{padding:7px 15px;font-size:13px}
 .hero .lead,.hero .ctas,.hero .eyebrow{animation:fadeup .9s .25s cubic-bezier(.2,.8,.2,1) both}
 .hero .ctas{animation-delay:.38s}
 @keyframes fadeup{from{opacity:0;transform:translateY(24px)}}
-.giant{position:absolute;left:50%;bottom:90px;transform:translateX(-50%);font-family:'Syne',var(--display);font-weight:800;font-size:clamp(140px,27vw,420px);letter-spacing:-.07em;line-height:.8;color:transparent;-webkit-text-stroke:1.5px rgba(0,0,0,.07);white-space:nowrap;pointer-events:none;user-select:none;z-index:0}
+
+.ring canvas{z-index:1}.ring .ringbar{z-index:2}
+.giant{position:absolute;left:50%;top:clamp(0px,3%,30px);transform:translateX(-50%) perspective(1100px) rotateX(24deg);transform-origin:50% 100%;font-family:'Syne',var(--display);font-weight:800;font-size:min(14.8vw,236px);letter-spacing:-.06em;line-height:.82;white-space:nowrap;pointer-events:none;user-select:none;z-index:0;
+  color:transparent;background:linear-gradient(105deg,rgba(29,29,31,0) 0%,rgba(29,29,31,0) 42%,rgba(255,255,255,.95) 50%,rgba(29,29,31,0) 58%,rgba(29,29,31,0) 100%) 130% 0/260% 100% no-repeat,linear-gradient(180deg,rgba(29,29,31,.11) 0%,rgba(29,29,31,.05) 55%,rgba(29,29,31,.015) 100%);-webkit-background-clip:text;background-clip:text;
+  filter:drop-shadow(0 1.5px 0 rgba(255,255,255,.95)) drop-shadow(0 -1px 0 rgba(0,0,0,.05)) drop-shadow(0 24px 30px rgba(0,0,0,.06));
+  -webkit-mask-image:linear-gradient(180deg,#000 30%,rgba(0,0,0,.35) 88%,rgba(0,0,0,.1));mask-image:linear-gradient(180deg,#000 30%,rgba(0,0,0,.35) 88%,rgba(0,0,0,.1));
+  animation:giantSheen 11s cubic-bezier(.45,0,.2,1) infinite}
+@keyframes giantSheen{0%,18%{background-position:130% 0,0 0}62%,100%{background-position:-30% 0,0 0}}
+@media (max-width:760px){.giant{top:4%;font-size:16.2vw;transform:translateX(-50%) perspective(700px) rotateX(20deg)}}
+@media (prefers-reduced-motion:reduce){.giant{animation:none}}
 .hero{min-height:calc(100svh - 56px);display:flex;flex-direction:column}
 .ring{position:relative;z-index:1;flex:1;min-height:400px;max-height:640px;margin-top:-6px}
 .ring canvas{position:absolute;inset:0;width:100%!important;height:100%!important;display:block;touch-action:pan-y;cursor:grab}
@@ -436,7 +445,6 @@ footer nav.ft{margin-left:0}
 </nav>
 
 <header class="hero" id="inicio">
-  <div class="giant" aria-hidden="true">metriiax</div>
   <div class="intro wrap">
     <div class="eyebrow">Tarjetas NFC para bares y restaurantes</div>
     <h1><span class="ln"><span>Toca la mesa.</span></span><span class="ln"><span><em>Pide.</em> Paga.</span></span></h1>
@@ -447,6 +455,7 @@ footer nav.ft{margin-left:0}
     </div>
   </div>
   <div class="ring" id="ring">
+  <div class="giant" aria-hidden="true">metriiax</div>
   <div class="ringbar">
     <div class="nowcard" aria-live="polite"><span class="sw" id="nowSw"></span><div><b id="nowName">Bar La Parada</b><small id="nowSub">Almendralejo · cliente real</small></div></div>
     <span class="counter" id="nowCount">01 / 14</span>
@@ -1184,11 +1193,11 @@ const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2,lerp=(a,b,t)=>a+(b-a)*t,clamp=
 function tex(renderer,src){const t=new THREE.CanvasTexture(src);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());t.generateMipmaps=true;return t}
 function faceMat(map,kind){
   if(kind==='gold')return new THREE.MeshStandardMaterial({map,roughness:.3,metalness:.3,envMapIntensity:1});
-  if(kind!=='holo')return new THREE.MeshStandardMaterial({map,roughness:.32,metalness:0,envMapIntensity:.9});
+  if(kind!=='holo')return new THREE.MeshPhysicalMaterial({map,roughness:.34,metalness:0,clearcoat:.75,clearcoatRoughness:.12,envMapIntensity:1});
   if(kind==='holo')return new THREE.MeshPhysicalMaterial({map,roughness:.22,metalness:.35,clearcoat:1,clearcoatRoughness:.08,iridescence:1,iridescenceIOR:1.35,iridescenceThicknessRange:[120,900],envMapIntensity:1.1});
   if(kind==='gold')return new THREE.MeshPhysicalMaterial({map,roughness:.3,metalness:.25,clearcoat:1,clearcoatRoughness:.12,envMapIntensity:.95});
   return new THREE.MeshPhysicalMaterial({map,roughness:.45,clearcoat:1,clearcoatRoughness:.16,envMapIntensity:.75})}
-function edgeMat(){return new THREE.MeshStandardMaterial({color:0xf1ede6,roughness:.4,envMapIntensity:.6})}
+function edgeMat(){return new THREE.MeshStandardMaterial({color:0xf4f1ec,roughness:.22,metalness:.55,envMapIntensity:1.1})}
 function makeCard(front,back,edge){const grp=new THREE.Group();grp.add(new THREE.Mesh(BODY,edge));const f=new THREE.Mesh(FACE,front);f.position.z=CT/2+.0008;grp.add(f);const b=new THREE.Mesh(FACE,back);b.rotation.y=Math.PI;b.position.z=-CT/2-.0008;grp.add(b);grp.userData.front=f;return grp}
 function setup(host,max){const r=new THREE.WebGLRenderer({antialias:!mobile,alpha:true,powerPreference:'high-performance'});r.setPixelRatio(Math.min(DPR,max||DPR));r.outputColorSpace=THREE.SRGBColorSpace;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.05;r.setClearColor(0,0);host.prepend(r.domElement);return r}
 function env(r,s){const pm=new THREE.PMREMGenerator(r);s.environment=pm.fromScene(new RoomEnvironment(r),.04).texture;pm.dispose()}
@@ -1203,13 +1212,14 @@ function loop(renderer,host,frame){let vis=false,acc=0,n=0,ratio=renderer.getPix
 
 /* ================= HERO: carrusel de tarjetas (fijo, sin efecto de scroll) ================= */
 (function hero(){
-  const HERO_IDS=['parada','nonna','ko','espuma','holo','bodega','brisa','gatos'];
+  const HERO_IDS=['parada','nonna','ko','espuma','faro','holo','bodega','lupita','brisa','gatos'];
   const HD=HERO_IDS.map(id=>DESIGNS.find(d=>d.id===id)).filter(Boolean),HN=HD.length;
   const host=document.getElementById('ring'),renderer=setup(host,mobile?1.5:1.5),scene=new THREE.Scene();env(renderer,scene);
   const cam=new THREE.PerspectiveCamera(30,1,.1,80);
   scene.add(new THREE.HemisphereLight(0xffffff,0x8e8e93,.7));
   const key=new THREE.DirectionalLight(0xffffff,1.6);key.position.set(3,4,6);scene.add(key);
   const fill=new THREE.DirectionalLight(0xdfe7ff,1.0);fill.position.set(-5,2,-3);scene.add(fill);
+  const rimL=new THREE.DirectionalLight(0xffffff,1.1);rimL.position.set(0,5,-6);scene.add(rimL);
   const BACK=tex(renderer,backCanvas),EDGE=edgeMat(),BACKMAT=faceMat(BACK);
   const FLOOR=-1.02,useMirror=!mobile;
   const ring=new THREE.Group(),mirror=new THREE.Group();mirror.scale.y=-1;mirror.position.y=2*FLOOR;scene.add(ring);if(useMirror)scene.add(mirror);
@@ -1217,6 +1227,8 @@ function loop(renderer,host,frame){let vis=false,acc=0,n=0,ratio=renderer.getPix
   const cards=HD.map(d=>{d.tex=tex(renderer,d.canvas);d.fmat=faceMat(d.tex,d.mat);const c=makeCard(d.fmat,BACKMAT,EDGE);ring.add(c);
     if(useMirror){const m=c.clone();mirror.add(m);c.userData.m=m}
     const s=new THREE.Mesh(new THREE.PlaneGeometry(1.6,.6),new THREE.MeshBasicMaterial({map:sh,transparent:true,depthWrite:false}));s.rotation.x=-Math.PI/2;scene.add(s);c.userData.sh=s;return c});
+  const hc=cnv(256,256),hg=hc.getContext('2d'),hr=hg.createRadialGradient(128,128,0,128,128,128);hr.addColorStop(0,'rgba(255,255,255,1)');hr.addColorStop(.45,'rgba(255,255,255,.45)');hr.addColorStop(1,'rgba(255,255,255,0)');hg.fillStyle=hr;hg.fillRect(0,0,256,256);
+  const halo=new THREE.Mesh(new THREE.PlaneGeometry(2.9,3.6),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(hc),color:0xffffff,transparent:true,opacity:0,depthWrite:false,toneMapped:false}));halo.renderOrder=-1;scene.add(halo);const haloCol=new THREE.Color(),haloTo=new THREE.Color();
   const fc=cnv(256,256),fg=fc.getContext('2d'),gr=fg.createRadialGradient(128,128,0,128,128,128);
   gr.addColorStop(0,'rgba(240,240,243,.72)');gr.addColorStop(.55,'rgba(240,240,243,.82)');gr.addColorStop(.8,'rgba(240,240,243,.55)');gr.addColorStop(1,'rgba(240,240,243,0)');fg.fillStyle=gr;fg.fillRect(0,0,256,256);
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(18,18),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(fc),transparent:true,depthWrite:false}));floor.rotation.x=-Math.PI/2;floor.position.y=FLOOR+.001;if(useMirror)scene.add(floor);
@@ -1237,7 +1249,7 @@ function loop(renderer,host,frame){let vis=false,acc=0,n=0,ratio=renderer.getPix
   addEventListener('pointerup',()=>{if(!drag)return;drag=false;if(Math.abs(dragged)>4){k=Math.round(-angle/slot);target=-k*slot;hold=clock+5}});
   let mx=0,my=0,tx=0,ty=0;addEventListener('pointermove',e=>{tx=e.clientX/innerWidth*2-1;ty=e.clientY/innerHeight*2-1;if(drag){const dx=e.clientX-lx;lx=e.clientX;dragged+=dx;angle+=dx*.006;target=angle}},{passive:true});
   let narrow=false;
-  function size(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);cam.aspect=w/h;narrow=cam.aspect<1.1;R=narrow?2.75:3.9;cam.fov=narrow?38:30;cam.updateProjectionMatrix()}
+  function size(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);cam.aspect=w/h;narrow=cam.aspect<1.1;R=narrow?2.9:4;cam.fov=narrow?38:30;cam.updateProjectionMatrix()}
   size();new ResizeObserver(size).observe(host);host.addEventListener('mx-resize',size);
   label(0);
   loop(renderer,host,(dt,t)=>{
@@ -1258,6 +1270,9 @@ function loop(renderer,host,frame){let vis=false,acc=0,n=0,ratio=renderer.getPix
       const shd=c.userData.sh;shd.position.set(x,FLOOR+.002,z);shd.material.opacity=(.3+f*.5)*ii;shd.scale.set(s,s,1)});
     ring.rotation.x=.05+my*.03;mirror.rotation.x=-ring.rotation.x;
     cam.position.set(mx*.3,.55,R+(narrow?5.4:4.6));cam.lookAt(0,-.4,0);
+    if(!reduce){key.position.set(3+Math.sin(t*.42)*3.6,4+Math.cos(t*.3)*.8,6);rimL.position.x=Math.sin(t*.27)*4}
+    {const fcard=cards[front];haloTo.set(HD[front].sw||'#d7d8dc');haloCol.lerp(haloTo,1-Math.exp(-dt*4));halo.material.color.copy(haloCol);
+     halo.position.set(fcard.position.x*.96,fcard.position.y+.05,fcard.position.z-.55);halo.quaternion.copy(cam.quaternion);halo.material.opacity=.34*ease(clamp(intro,0,1))}
     renderer.render(scene,cam);
   });
 })();
