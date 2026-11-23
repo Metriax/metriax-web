@@ -102,6 +102,8 @@ nav.top .btn{padding:7px 15px;font-size:13px}
 .ctrl button:hover,.ctrl label:hover{background:#fff}
 .ctrl label:focus-within{outline:2px solid #0071e3;outline-offset:3px}
 .ctrl input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.ctrl .zbtn,.ctrl label{white-space:nowrap}
+@media (max-width:380px){.ctrl{gap:6px}.ctrl .zbtn,.ctrl label{padding:0 9px !important;font-size:12.5px !important}}
 @media (max-width:760px){.ctrl .zbtn,.ctrl label{padding:0 12px;font-size:13px}.ring{min-height:440px}.giant{bottom:120px}.nowcard{min-width:0}.counter{display:none}}
 
 /* STRIP */
@@ -1201,6 +1203,8 @@ function loop(renderer,host,frame){let vis=false,acc=0,n=0,ratio=renderer.getPix
 
 /* ================= HERO: carrusel de tarjetas (fijo, sin efecto de scroll) ================= */
 (function hero(){
+  const HERO_IDS=['parada','nonna','ko','espuma','holo','bodega','brisa','gatos'];
+  const HD=HERO_IDS.map(id=>DESIGNS.find(d=>d.id===id)).filter(Boolean),HN=HD.length;
   const host=document.getElementById('ring'),renderer=setup(host,mobile?1.5:1.5),scene=new THREE.Scene();env(renderer,scene);
   const cam=new THREE.PerspectiveCamera(30,1,.1,80);
   scene.add(new THREE.HemisphereLight(0xffffff,0x8e8e93,.7));
@@ -1210,20 +1214,20 @@ function loop(renderer,host,frame){let vis=false,acc=0,n=0,ratio=renderer.getPix
   const FLOOR=-1.02,useMirror=!mobile;
   const ring=new THREE.Group(),mirror=new THREE.Group();mirror.scale.y=-1;mirror.position.y=2*FLOOR;scene.add(ring);if(useMirror)scene.add(mirror);
   const sh=blob();
-  const cards=DESIGNS.map(d=>{d.tex=tex(renderer,d.canvas);d.fmat=faceMat(d.tex,d.mat);const c=makeCard(d.fmat,BACKMAT,EDGE);ring.add(c);
+  const cards=HD.map(d=>{d.tex=tex(renderer,d.canvas);d.fmat=faceMat(d.tex,d.mat);const c=makeCard(d.fmat,BACKMAT,EDGE);ring.add(c);
     if(useMirror){const m=c.clone();mirror.add(m);c.userData.m=m}
     const s=new THREE.Mesh(new THREE.PlaneGeometry(1.6,.6),new THREE.MeshBasicMaterial({map:sh,transparent:true,depthWrite:false}));s.rotation.x=-Math.PI/2;scene.add(s);c.userData.sh=s;return c});
   const fc=cnv(256,256),fg=fc.getContext('2d'),gr=fg.createRadialGradient(128,128,0,128,128,128);
   gr.addColorStop(0,'rgba(240,240,243,.72)');gr.addColorStop(.55,'rgba(240,240,243,.82)');gr.addColorStop(.8,'rgba(240,240,243,.55)');gr.addColorStop(1,'rgba(240,240,243,0)');fg.fillStyle=gr;fg.fillRect(0,0,256,256);
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(18,18),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(fc),transparent:true,depthWrite:false}));floor.rotation.x=-Math.PI/2;floor.position.y=FLOOR+.001;if(useMirror)scene.add(floor);
 
-  let R=3.6,slot=Math.PI*2/N,angle=0,target=0,k=0,hold=0,next=0,clock=0,t0=null;
+  let R=3.6,slot=Math.PI*2/HN,angle=0,target=0,k=0,hold=0,next=0,clock=0,t0=null;
   const nm=document.getElementById('nowName'),nsub=document.getElementById('nowSub'),nsw=document.getElementById('nowSw'),ncount=document.getElementById('nowCount');
-  let shownIdx=-1;function label(i){if(i===shownIdx)return;shownIdx=i;const d=DESIGNS[i];nm.textContent=d.name;nsub.textContent=d.sub;nsw.style.background=d.sw;ncount.textContent=String(i+1).padStart(2,'0')+' / '+String(N).padStart(2,'0')}
+  let shownIdx=-1;function label(i){if(i===shownIdx)return;shownIdx=i;const d=HD[i];nm.textContent=d.name;nsub.textContent=d.sub;nsw.style.background=d.sw;ncount.textContent=String(i+1).padStart(2,'0')+' / '+String(HN).padStart(2,'0')}
   function goTo(n){k=n;target=-k*slot;hold=clock+6}
-  document.getElementById('nextBtn').onclick=()=>goTo(k+1);document.getElementById('zoomBtn').onclick=()=>{const d=DESIGNS[((k%N)+N)%N];hold=clock+15;mxZoom(d.canvas.toDataURL('image/jpeg',.92),d.name,d.sub)};document.getElementById('prevBtn').onclick=()=>goTo(k-1);
+  document.getElementById('nextBtn').onclick=()=>goTo(k+1);document.getElementById('zoomBtn').onclick=()=>{const d=HD[((k%HN)+HN)%HN];hold=clock+15;mxZoom(d.canvas.toDataURL('image/jpeg',.92),d.name,d.sub)};document.getElementById('prevBtn').onclick=()=>goTo(k-1);
   function useFile(f){if(!f||!/^image\//.test(f.type))return;const im=new Image();im.onload=()=>{const c=cnv(),g=c.getContext('2d');const s=Math.max(TW/im.width,TH/im.height);g.drawImage(im,(TW-im.width*s)/2,(TH-im.height*s)/2,im.width*s,im.height*s);
-    const i=((k%N)+N)%N,d=DESIGNS[i];d.fmat.map=tex(renderer,c);d.fmat.needsUpdate=true;d.canvas=c;d.name='Tu diseño';d.sub='Solo se ve en tu navegador';d.sw='#d7d8dc';shownIdx=-1;hold=clock+15;URL.revokeObjectURL(im.src);window.mxZoom&&mxZoom(c.toDataURL('image/jpeg',.92),d.name,d.sub)};im.src=URL.createObjectURL(f)}
+    const i=((k%HN)+HN)%HN,d=HD[i];d.fmat.map=tex(renderer,c);d.fmat.needsUpdate=true;d.canvas=c;d.name='Tu diseño';d.sub='Solo se ve en tu navegador';d.sw='#d7d8dc';shownIdx=-1;hold=clock+15;URL.revokeObjectURL(im.src);window.mxZoom&&mxZoom(c.toDataURL('image/jpeg',.92),d.name,d.sub)};im.src=URL.createObjectURL(f)}
   document.getElementById('upFile').addEventListener('change',e=>{useFile(e.target.files[0]);e.target.value=''});
   let depth=0;const isF=e=>e.dataTransfer&&[...e.dataTransfer.types].includes('Files');
   host.addEventListener('dragenter',e=>{if(isF(e)){e.preventDefault();depth++;host.classList.add('over')}});host.addEventListener('dragover',e=>{if(isF(e))e.preventDefault()});
@@ -1233,7 +1237,7 @@ function loop(renderer,host,frame){let vis=false,acc=0,n=0,ratio=renderer.getPix
   addEventListener('pointerup',()=>{if(!drag)return;drag=false;if(Math.abs(dragged)>4){k=Math.round(-angle/slot);target=-k*slot;hold=clock+5}});
   let mx=0,my=0,tx=0,ty=0;addEventListener('pointermove',e=>{tx=e.clientX/innerWidth*2-1;ty=e.clientY/innerHeight*2-1;if(drag){const dx=e.clientX-lx;lx=e.clientX;dragged+=dx;angle+=dx*.006;target=angle}},{passive:true});
   let narrow=false;
-  function size(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);cam.aspect=w/h;narrow=cam.aspect<1.1;R=narrow?2.3:3.6;cam.fov=narrow?38:30;cam.updateProjectionMatrix()}
+  function size(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);cam.aspect=w/h;narrow=cam.aspect<1.1;R=narrow?2.75:3.9;cam.fov=narrow?38:30;cam.updateProjectionMatrix()}
   size();new ResizeObserver(size).observe(host);host.addEventListener('mx-resize',size);
   label(0);
   loop(renderer,host,(dt,t)=>{
@@ -1242,7 +1246,7 @@ function loop(renderer,host,frame){let vis=false,acc=0,n=0,ratio=renderer.getPix
     if(!reduce&&!drag&&t>next&&t>hold){goTo(k+1);hold=0;next=t+2.8}
     if(!drag)angle+=(target-angle)*(1-Math.exp(-dt*(reduce?30:3.6)));
     mx+=(tx-mx)*.06;my+=(ty-my)*.06;
-    const front=((Math.round(-angle/slot)%N)+N)%N;label(front);
+    const front=((Math.round(-angle/slot)%HN)+HN)%HN;label(front);
     cards.forEach((c,i)=>{
       const a=i*slot+angle,x=Math.sin(a)*R,z=Math.cos(a)*R,f=Math.max(0,Math.cos(a));
       const isF=i===front,bob=reduce?0:Math.sin(t*1.2+i)*.035;
