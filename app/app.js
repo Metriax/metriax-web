@@ -646,7 +646,8 @@ const Acc = {
       const p=Store.get("pedidos",k.pedido);
       if(p && Store.all("tickets").filter(x=>x.pedido===k.pedido).every(x=>x.id===tid || x.estado==="listo")){
         await Store.set("pedidos",p.id,{...p,listoT:ahora()});
-        if(p.llevar){ const id=nid(); await Store.set("avisos",id,{id,mesa:p.mesa||0,llevar:!!p.llevar,codigo:p.codigo||"",tipo:"listo",det:(p.llevar?`${p.nombre} · `:"")+p.items.map(x=>`${x.q}× ${x.n}`).join(", "),t:ahora(),pedido:p.id,atendido:null}); }
+        // Aviso al camarero (pedido de mesa) o a barra (para llevar): el plato está listo para servir o entregar
+        { const id=nid(); await Store.set("avisos",id,{id,mesa:p.mesa||0,llevar:!!p.llevar,codigo:p.codigo||"",tipo:"listo",det:(p.llevar?`${p.nombre} · `:"")+p.items.map(x=>`${x.q}× ${x.n}`).join(", "),t:ahora(),pedido:p.id,atendido:null}); }
       }
     }
   },
@@ -1089,7 +1090,7 @@ function VReservar(){
     else huecos=ocupacion(f.fecha);
     pintar();
   }
-  const leer=()=>{ const g=id=>app.querySelector(id)?.value??""; if(app.querySelector("#rs-nombre")) Object.assign(f,{nombre:g("#rs-nombre").trim(),tel:g("#rs-tel").trim(),email:g("#rs-email").trim(),nota:g("#rs-nota").trim()}); };
+  const leer=()=>{ const g=id=>app.querySelector(id)?.value??""; if(app.querySelector("#rs-nombre")) Object.assign(f,{nombre:g("#rs-nombre").trim(),tel:g("#rs-tel").trim(),email:g("#rs-email").trim(),nota:g("#rs-nota").trim(),acepto:!!app.querySelector("#rs-acepto")?.checked}); };
   function pintar(){
     const c=cfgReservas(), b=cfgBar(), y=window.scrollY;
     const cab=`<div class="m-cab"><div class="m-num" style="background:var(--amarillo);color:var(--tinta)">${ico("calendar")}</div><div style="flex:1"><div class="t">${T("resT")}</div><div class="s">${esc(b.nombre)}${b.ciudad?" · "+esc(b.ciudad):""}</div></div>${idiomaHTML()}</div>`;
@@ -1106,7 +1107,7 @@ function VReservar(){
       <label>${T("resTel")}<input id="rs-tel" type="tel" autocomplete="tel" maxlength="20" value="${esc(f.tel)}" required></label>
       <label>${T("resEmail")}<input id="rs-email" type="email" autocomplete="email" maxlength="80" value="${esc(f.email)}"></label>
       <label>${T("resNota")}<input id="rs-nota" maxlength="140" placeholder="${T("resNotaPh")}" value="${esc(f.nota)}"></label>
-      ${consentHTML("rs-acepto")}<button class="btn rojo" type="submit" ${enviando?"disabled":""}>${ico("calendar")}${T("resEnviar")}</button>
+      ${consentHTML("rs-acepto",f.acepto)}<button class="btn rojo" type="submit" ${enviando?"disabled":""}>${ico("calendar")}${T("resEnviar")}</button>
       <a class="btn peq" href="#carta" style="justify-self:start">${ico("back")}${T("verCarta")}</a>
     </form></div>`;
     if(y) window.scrollTo(0,y);
