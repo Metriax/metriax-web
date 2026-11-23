@@ -1296,7 +1296,7 @@ function ir(){
     vista && vista.salir && vista.salir(); vista={clave:"cerrado"}; document.documentElement.classList.add("cliente"); document.body.dataset.v="cerrado"; document.title="Carta no disponible";
     app.innerHTML=`<div class="app-mesa"><div class="m-cuerpo" style="align-content:center;text-align:center;min-height:80vh"><p class="m-hola">${LG("Esta carta no está disponible","This menu isn't available","Este menu não está disponível")}</p><p class="m-texto">${LG("Pide la carta al personal del local.","Please ask the staff for the menu.","Peça o menu ao pessoal.")}</p></div></div>`; return; }
   if(vista && vista.clave===clave) return;
-  vista && vista.salir && vista.salir(); Comanda.cerrar();
+  vista && vista.salir && vista.salir(); Comanda.cerrar(); AtajoMesa.quitar(); if(r.v==="mesa") setTimeout(()=>AtajoMesa.poner(r.n),0);
   document.documentElement.classList.toggle("staff", ["camarero","panel","admin","sinacceso","pin","local"].includes(r.v));
   // Las pantallas del cliente usan el tema de la marca (también el oscuro); las del personal, siempre el claro
   document.documentElement.classList.toggle("cliente", ["inicio","carta","mesa","llevar","seguir","reservar","reserva","login","pin","sinacceso","local","legal","fichar"].includes(r.v));
@@ -1872,6 +1872,7 @@ function VCamarero(){
         <div class="c-fila"><label class="oculto" for="yo">Soy</label><select class="c-sel" id="yo" ${fijo?"disabled":""}>${cams().map(c=>`<option value="${c.id}" ${c.id===yo?"selected":""}>${esc(c.n)}${t.activos[c.id]===false?" (libra)":""}</option>`).join("")}</select>
           <span style="font-size:13px;color:#cfc4b1;flex:1">Mesas ${misM.length?resumirMesas(misM):"—"}</span>
           <button class="sonido" data-sonido aria-pressed="${sonidoOn()}">${ico("speaker")}${sonidoOn()?"Sonido":"Sin sonido"}</button>${Store.sesion?`<button class="sonido" data-salir>Salir</button>`:Pin.activo()?`<button class="sonido" data-bloquear>${ico("lock")}Salir</button>`:""}</div>
+        <button class="cx-abrir" data-tomar>${ico("menu")}Tomar comanda</button>
         <div class="seg" role="group" aria-label="Vista"><button data-sub="avisos" aria-pressed="${sub==="avisos"}">Avisos${av.length?`<span class="b">${av.length}</span>`:""}</button><button data-sub="mesas" aria-pressed="${sub==="mesas"}">Mis mesas</button><button data-sub="todas" aria-pressed="${sub==="todas"}">Sala</button><button data-sub="reservas" aria-pressed="${sub==="reservas"}">Reservas${resPend?`<span class="b">${resPend}</span>`:""}</button></div>
       </div>
       <div class="c-cuerpo">
@@ -1900,6 +1901,7 @@ function VCamarero(){
     if(await clicReserva(t,yo)) return;
     const ok=t.closest("[data-ok]"); if(ok){ const a=Store.get("avisos",ok.dataset.ok); await Acc.atender(ok.dataset.ok,yo); if(a&&!a.info&&a.tipo!=="validar") toast(a.tipo==="llamada"?`Te encargas de la mesa ${a.mesa}. Suma en tu ranking.`:`Vas a la mesa ${a.mesa}. Los demás ya no lo ven.`); return; }
     const sv=t.closest("[data-servir]"); if(sv){ const a=Store.get("avisos",sv.dataset.servir); await Acc.servir(sv.dataset.servir,yo); toast(a.llevar?`${a.codigo} entregado y cobrado.`:`Mesa ${a.mesa}: servido. El cliente lo ve en su móvil.`); return; }
+    if(t.closest("[data-tomar]")) return Comanda.abrir(null,yo);
     const nm=t.closest("[data-nota-mesa]"); if(nm){ const n=+nm.dataset.notaMesa; hojaMesa=null; pintar(); return Comanda.abrir(n,yo); }
     const mb=t.closest("[data-mesa]"); if(mb){ hojaMesa=+mb.dataset.mesa; return pintar(); }
     if(await clicParcial(t,yo)) return pintar();
@@ -2081,46 +2083,87 @@ function VFichar(){
 }
 // Tomar nota: comanda manual del personal (camarero o barra). Va directa a cocina y barra, ya aceptada, a nombre de quien la toma.
 const Comanda = {
-  el:null, n:null, car:{}, nota:"", cat:null, por:null, enviando:false,
-  abrir(n,por){ this.por=por; this.n=n||null; this.car={}; this.nota=""; this.cat=(seccionesConPlatos()[0]||{}).id; this.pintar(); },
-  cerrar(){ this.n=null; this.car={}; this.nota=""; this.enviando=false; if(this.el){ this.el.remove(); this.el=null; } },
+  // Comanda rápida del camarero: Rápido (lo más pedido) · Bebidas · Comida. Un toque = una unidad.
+  abrir(n,por){ this.por=por; this.n=n||null; this.car={}; this.nota=""; this.tab="rapido"; this.sub={}; this.q=""; this.cesta=false; this.enviando=false; this.pop=this.popularidad(); this.pintar(); },
+  cerrar(){ this.n=null; this.car={}; this.nota=""; this.enviando=false; this.cesta=false; if(this.el){ this.el.remove(); this.el=null; } document.body.classList.remove("cx-abierta"); },
+  // Lo que más se pide (últimos 30 días): sale de los pedidos y de las cuentas cobradas
+  popularidad(){ const desde=ahora()-30*864e5, m={};
+    Store.all("pedidos").filter(p=>p.t>=desde&&!p.rechazado).forEach(p=>(p.items||[]).forEach(x=>{ m[x.id]=(m[x.id]||0)+(+x.q||0); }));
+    if(!Object.keys(m).length) Store.all("cuentas").filter(c=>c.t>=desde).forEach(c=>(c.items||[]).forEach(x=>{ if(x.id) m[x.id]=(m[x.id]||0)+(+x.q||1); }));
+    return m; },
+  orden(lista){ const pop=this.pop||{}; return lista.map((p,i)=>[p,i]).sort((a,b)=>(agotado(a[0].id)-agotado(b[0].id))||((pop[b[0].id]||0)-(pop[a[0].id]||0))||(a[1]-b[1])).map(x=>x[0]); },
+  grupos(){ const ss=seccionesConPlatos(); return { bebidas:ss.filter(s=>(s.dest||"cocina")==="barra"), comida:ss.filter(s=>(s.dest||"cocina")!=="barra") }; },
+  rapidos(){ const c=carta().filter(p=>!agotado(p.id)), pop=this.pop||{};
+    let L=c.filter(p=>pop[p.id]>0).sort((a,b)=>pop[b.id]-pop[a.id]);
+    if(L.length<12) L=L.concat(c.filter(p=>!L.includes(p)&&p.top)); if(L.length<12) L=L.concat(c.filter(p=>!L.includes(p)));
+    // mezcla bebidas y comida: las dos cosas que más se piden de cada tipo, arriba
+    return L.slice(0,12); },
   total(){ return Object.entries(this.car).reduce((a,[k,q])=>a+precio(k)*q,0); },
   cuenta(){ return Object.values(this.car).reduce((a,b)=>a+b,0); },
-  pie(){ const c=this.cuenta(); return `<textarea id="cmd-nota" rows="2" placeholder="Anotaciones: sin cebolla, poco hecho, para compartir…" maxlength="200">${esc(this.nota)}</textarea>
-      <button class="cmd-env" data-c-enviar ${c?"":"disabled"}>${c?`Enviar a cocina y barra · ${c} ${c===1?"producto":"productos"} · ${eur(this.total())}`:"Añade algo para enviar"}</button>`; },
-  pintar(){
-    if(!this.el){ const d=document.createElement("div"); d.id="comanda-ui"; d.addEventListener("click",e=>this.clic(e)); d.addEventListener("input",e=>this.entrada(e)); document.body.appendChild(d); this.el=d; }
-    const N=mesasN(), cab=(t)=>`<div class="cmd-cab"><h3>${t}</h3><button data-c-cerrar>Cerrar</button></div>`;
-    if(!this.n){
-      this.el.innerHTML=`<div class="cmd-fondo"><div class="cmd" role="dialog" aria-label="Tomar nota">${cab("Tomar nota · elige la mesa")}
-        <div class="cmd-mesas">${Array.from({length:N},(_,i)=>mesa(i+1)).map(m=>`<button data-c-mesa="${m.n}" class="${m.abierta?"oc":""}">${m.n}<small>${m.abierta?"ocupada":"libre"}</small></button>`).join("")}</div></div></div>`; return; }
-    const ss=seccionesConPlatos(), pl=carta().filter(p=>p.sec===this.cat);
-    this.el.innerHTML=`<div class="cmd-fondo"><div class="cmd" role="dialog" aria-label="Tomar nota">${cab(`Mesa ${this.n}`)}
-      <div style="padding:6px 12px 0;display:flex;justify-content:space-between;align-items:center"><span style="color:#6b6258">Atiende: ${esc(nomCam(this.por)||"barra")}</span><button data-c-cambiar>Cambiar de mesa</button></div>
-      <div class="cmd-chips">${ss.map(x=>`<button data-c-cat="${x.id}" aria-pressed="${x.id===this.cat}">${esc(x.n)}</button>`).join("")}</div>
-      <input type="search" id="cmd-bus" placeholder="Buscar en toda la carta…" autocomplete="off">
-      <div class="cmd-lista" id="cmd-lista">${this.lista(pl)}</div>
-      <div class="cmd-pie" id="cmd-pie">${this.pie()}</div></div></div>`;
+  porDest(){ const r={cocina:0,barra:0}; Object.entries(this.car).forEach(([k,q])=>{ const it=carta().find(p=>p.id===k); r[it&&it.dest==="barra"?"barra":"cocina"]+=q; }); return r; },
+  tile(p){ const q=this.car[p.id]||0, ag=agotado(p.id), pop=(this.pop||{})[p.id]||0;
+    return `<div class="cx-t ${q?"on":""} ${ag?"ag":""}"><button class="cx-add" data-x-add="${esc(p.id)}" ${ag?"disabled":""} aria-label="Añadir ${esc(p.n)}"><b>${esc(p.n)}</b><span>${ag?"Agotado":eur(p.p)}</span>${q?`<i class="cx-q">${q}</i>`:""}</button>${q?`<button class="cx-menos" data-x-menos="${esc(p.id)}" aria-label="Quitar uno de ${esc(p.n)}">−</button>`:""}</div>`; },
+  cuerpo(){
+    if(this.q){ const q=norm(this.q); const L=this.orden(carta().filter(p=>norm(p.n+" "+(p.d||"")).includes(q)));
+      return `<div class="cx-grid">${L.map(p=>this.tile(p)).join("")||`<p class="cx-vacio">Nada con «${esc(this.q)}»</p>`}</div>`; }
+    if(this.tab==="rapido"){ const L=this.rapidos(), hay=Object.keys(this.pop||{}).length;
+      return `<p class="cx-tit">${hay?"Lo que más se pide aquí":"Lo más destacado de la carta"}</p><div class="cx-grid">${L.map(p=>this.tile(p)).join("")}</div>`; }
+    const ss=this.grupos()[this.tab]||[]; if(!ss.length) return `<p class="cx-vacio">No hay nada en esta parte de la carta.</p>`;
+    const cur=ss.some(s=>s.id===this.sub[this.tab])?this.sub[this.tab]:ss[0].id; this.sub[this.tab]=cur;
+    const L=this.orden(carta().filter(p=>p.sec===cur));
+    return `<div class="cx-secs">${ss.map(s=>`<button data-x-sec="${esc(s.id)}" aria-pressed="${s.id===cur}">${esc(s.n)}</button>`).join("")}</div><div class="cx-grid">${L.map(p=>this.tile(p)).join("")}</div>`;
   },
-  lista(pl){ return pl.map(p=>{ const ag=agotado(p.id), q=this.car[p.id]||0; return `<div class="cmd-it ${ag?"ag":""}" data-txt="${esc(norm(p.n+" "+(p.d||"")))}"><div class="n"><b>${esc(p.n)}</b>${ag?`<small>Agotado</small>`:`<small>${eur(p.p)}</small>`}</div>
-      ${ag?"":`<div class="cmd-q"><button data-c-menos="${p.id}" aria-label="Quitar uno">−</button><b data-c-q="${p.id}">${q}</b><button data-c-mas="${p.id}" aria-label="Añadir uno">+</button></div>`}</div>`; }).join(""); },
+  pie(){ const c=this.cuenta(), d=this.porDest();
+    if(this.cesta){ const L=Object.entries(this.car).filter(([,q])=>q>0);
+      return `<div class="cx-cesta"><div class="cx-cesta-cab"><b>Comanda · Mesa ${this.n}</b><button class="cx-link" data-x-cesta>Seguir añadiendo</button></div>
+        <ul>${L.map(([k,q])=>{ const it=carta().find(p=>p.id===k)||{n:k,p:0}; return `<li><span class="n">${esc(it.n)}</span><span class="cx-ctr"><button data-x-menos="${esc(k)}" aria-label="Quitar uno">−</button><b>${q}</b><button data-x-add="${esc(k)}" aria-label="Añadir uno">+</button></span><span class="p">${eur(it.p*q)}</span></li>`; }).join("")||`<li class="cx-vacio">Todavía no hay nada.</li>`}</ul>
+        <textarea id="cx-nota" rows="2" maxlength="200" placeholder="Anotaciones: sin cebolla, poco hecho, para compartir…">${esc(this.nota)}</textarea></div>`
+        +`<button class="cx-env" data-x-enviar ${c?"":"disabled"}>${c?`Enviar · ${eur(this.total())}<small>${[d.cocina?`${d.cocina} a cocina`:"",d.barra?`${d.barra} a barra`:""].filter(Boolean).join(" · ")}</small>`:"Añade algo para enviar"}</button>`; }
+    return `<div class="cx-barra"><button class="cx-ver" data-x-cesta ${c?"":"disabled"}><i>${c}</i><span>${c?"Ver comanda":"Comanda vacía"}</span><b>${eur(this.total())}</b></button><button class="cx-env cx-env-p" data-x-enviar ${c?"":"disabled"}>Enviar</button></div>`; },
+  pintar(){
+    if(!this.el){ const d=document.createElement("div"); d.id="comanda-ui"; d.addEventListener("click",e=>this.clic(e)); d.addEventListener("input",e=>this.entrada(e)); document.body.appendChild(d); this.el=d; document.body.classList.add("cx-abierta"); }
+    const yo=this.por;
+    if(!this.n){ const todas=Array.from({length:mesasN()},(_,i)=>mesa(i+1)), mias=todas.filter(m=>camDe(m.n)===yo), resto=todas.filter(m=>camDe(m.n)!==yo);
+      const b=m=>`<button data-x-mesa="${m.n}" class="${m.abierta?"oc":""}"><b>${m.n}</b><small>${m.abierta?(camDe(m.n)&&camDe(m.n)!==yo?esc(nomCam(camDe(m.n))):"ocupada"):"libre"}</small></button>`;
+      this.el.innerHTML=`<div class="cx" role="dialog" aria-label="Tomar comanda"><div class="cx-cab"><div><small>Tomar comanda</small><h3>¿Qué mesa?</h3></div><button class="cx-x" data-x-cerrar aria-label="Cerrar">✕</button></div>
+        <div class="cx-scroll">${mias.length?`<p class="cx-tit">Tus mesas</p><div class="cx-mesas">${mias.map(b).join("")}</div>`:""}<p class="cx-tit">${mias.length?"Resto de la sala":"Sala"}</p><div class="cx-mesas">${resto.map(b).join("")}</div></div></div>`; return; }
+    const g=this.grupos(), tabs=[["rapido","Rápido"],...(g.bebidas.length?[["bebidas","Bebidas"]]:[]),...(g.comida.length?[["comida","Comida"]]:[])];
+    const scrollY=(this.el.querySelector(".cx-scroll")||{}).scrollTop||0, mismo=this._ult===this.tab+"|"+(this.sub[this.tab]||"")+"|"+this.q;
+    this.el.innerHTML=`<div class="cx" role="dialog" aria-label="Comanda de la mesa ${this.n}">
+      <div class="cx-cab"><div><small>${esc(zonaDe(this.n))} · ${esc(nomCam(yo)||"Barra")}</small><h3>Mesa ${this.n} <button class="cx-link" data-x-cambiar>Cambiar</button></h3></div><button class="cx-x" data-x-cerrar aria-label="Cerrar">✕</button></div>
+      <div class="cx-tabs" role="tablist">${tabs.map(([k,t])=>`<button role="tab" data-x-tab="${k}" aria-selected="${!this.q&&this.tab===k}">${t}</button>`).join("")}<label class="cx-bus"><span class="oculto">Buscar</span><input type="search" id="cx-bus" placeholder="Buscar…" value="${esc(this.q)}" autocomplete="off"></label></div>
+      <div class="cx-scroll">${this.cuerpo()}</div>
+      <div class="cx-pie" id="cx-pie">${this.pie()}</div></div>`;
+    if(mismo){ const sc=this.el.querySelector(".cx-scroll"); if(sc) sc.scrollTop=scrollY; }
+    this._ult=this.tab+"|"+(this.sub[this.tab]||"")+"|"+this.q;
+  },
+  refrescar(){ // sin repintar todo: mantiene el scroll y la búsqueda
+    const sc=this.el.querySelector(".cx-scroll"); if(sc) sc.innerHTML=this.cuerpo(); const pie=this.el.querySelector("#cx-pie"); if(pie) pie.innerHTML=this.pie(); },
   entrada(e){
-    if(e.target.id==="cmd-nota"){ this.nota=e.target.value; return; }
-    if(e.target.id==="cmd-bus"){ const q=norm(e.target.value.trim()), box=this.el.querySelector("#cmd-lista");
-      const pl=q?carta().filter(p=>norm(p.n+" "+(p.d||"")).includes(q)):carta().filter(p=>p.sec===this.cat); box.innerHTML=this.lista(pl); } },
-  actualizar(id){ const b=this.el.querySelector(`[data-c-q="${id}"]`); if(b) b.textContent=this.car[id]||0; const pie=this.el.querySelector("#cmd-pie"); const nota=this.el.querySelector("#cmd-nota"); if(nota) this.nota=nota.value; pie.innerHTML=this.pie(); },
+    if(e.target.id==="cx-nota"){ this.nota=e.target.value; return; }
+    if(e.target.id==="cx-bus"){ this.q=e.target.value.trim(); const sc=this.el.querySelector(".cx-scroll"); if(sc) sc.innerHTML=this.cuerpo();
+      this.el.querySelectorAll("[data-x-tab]").forEach(b=>b.setAttribute("aria-selected",String(!this.q&&b.dataset.xTab===this.tab))); } },
   async clic(e){
     const t=e.target;
-    if(t.closest("[data-c-cerrar]")||t.classList.contains("cmd-fondo")) return this.cerrar();
-    const mb=t.closest("[data-c-mesa]"); if(mb){ this.n=+mb.dataset.cMesa; return this.pintar(); }
-    if(t.closest("[data-c-cambiar]")){ this.n=null; return this.pintar(); }
-    const ct=t.closest("[data-c-cat]"); if(ct){ this.cat=ct.dataset.cCat; return this.pintar(); }
-    const mas=t.closest("[data-c-mas]"); if(mas){ const id=mas.dataset.cMas; this.car[id]=Math.min(30,(this.car[id]||0)+1); return this.actualizar(id); }
-    const me=t.closest("[data-c-menos]"); if(me){ const id=me.dataset.cMenos; this.car[id]=Math.max(0,(this.car[id]||0)-1); if(!this.car[id]) delete this.car[id]; return this.actualizar(id); }
-    if(t.closest("[data-c-enviar]")){ if(this.enviando||!this.cuenta()) return; this.enviando=true;
-      const n=this.n, c=this.cuenta(), nota=(this.el.querySelector("#cmd-nota")||{}).value||this.nota;
-      try{ const ok=await Acc.comanda(n,{...this.car},nota.trim(),this.por); if(!ok) throw 0; toast(`Mesa ${n}: ${c} ${c===1?"producto enviado":"productos enviados"} a cocina y barra.`); this.cerrar(); }
+    if(t.closest("[data-x-cerrar]")){ if(this.cuenta()&&!confirm("Hay productos sin enviar. ¿Cerrar y descartarlos?")) return; return this.cerrar(); }
+    const mb=t.closest("[data-x-mesa]"); if(mb){ this.n=+mb.dataset.xMesa; return this.pintar(); }
+    if(t.closest("[data-x-cambiar]")){ this.n=null; this.cesta=false; return this.pintar(); }
+    const tb=t.closest("[data-x-tab]"); if(tb){ this.tab=tb.dataset.xTab; this.q=""; this.cesta=false; return this.pintar(); }
+    const sc=t.closest("[data-x-sec]"); if(sc){ this.sub[this.tab]=sc.dataset.xSec; return this.pintar(); }
+    const ad=t.closest("[data-x-add]"); if(ad){ const id=ad.dataset.xAdd; if(agotado(id)) return; this.car[id]=Math.min(30,(this.car[id]||0)+1); try{ navigator.vibrate&&navigator.vibrate(8); }catch(_){} return this.refrescar(); }
+    const me=t.closest("[data-x-menos]"); if(me){ const id=me.dataset.xMenos; this.car[id]=Math.max(0,(this.car[id]||0)-1); if(!this.car[id]) delete this.car[id]; if(!this.cuenta()) this.cesta=false; return this.refrescar(); }
+    if(t.closest("[data-x-cesta]")){ const nota=this.el.querySelector("#cx-nota"); if(nota) this.nota=nota.value; this.cesta=!this.cesta&&this.cuenta()>0; return this.refrescar(); }
+    if(t.closest("[data-x-enviar]")){ if(this.enviando||!this.cuenta()) return; this.enviando=true;
+      const n=this.n, c=this.cuenta(), nota=(this.el.querySelector("#cx-nota")||{}).value??this.nota;
+      try{ const ok=await Acc.comanda(n,{...this.car},String(nota||"").trim(),this.por); if(!ok) throw 0; toast(`Mesa ${n}: ${c} ${c===1?"producto enviado":"productos enviados"} a cocina y barra.`); this.cerrar(); }
       catch(err){ this.enviando=false; toast("No se ha podido enviar la comanda. Inténtalo otra vez."); } } }
+};
+// Si un camarero con la sesión iniciada acerca su móvil a la tarjeta de una mesa, puede tomar la comanda de esa mesa
+const AtajoMesa = {
+  quitar(){ const b=document.getElementById("cx-atajo"); if(b) b.remove(); },
+  poner(n){ this.quitar(); if(!(Store.modo==="supa"&&Store.sesion&&Store.rol)) return;
+    const b=document.createElement("button"); b.id="cx-atajo"; b.type="button"; b.innerHTML=`${ico("menu")}Tomar comanda · Mesa ${n}`;
+    b.addEventListener("click",()=>Comanda.abrir(+n,Store.cam||"personal")); document.body.appendChild(b); }
 };
 function VKds({dest}){
   let vistos=null, seguroSalida=false;
