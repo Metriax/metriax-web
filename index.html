@@ -400,9 +400,10 @@ footer .ft-arr{align-self:flex-end;width:44px;height:44px;border-radius:50%;back
 footer .ft-acc:hover .ft-arr{transform:translateX(4px)}
 footer .fbar{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:26px;padding-bottom:10px;font-size:13px;color:#6e6e73}
 footer .fbar a{color:#a1a1a6;text-decoration:none}footer .fbar-l{display:flex;gap:20px}footer .fbar a:hover{color:#fff}
-footer .fgiant{font-family:'Syne',var(--display);font-weight:800;letter-spacing:-.06em;font-size:clamp(64px,15.5vw,250px);line-height:.8;text-align:center;margin-top:10px;background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,0) 85%);-webkit-background-clip:text;background-clip:text;color:transparent;user-select:none;white-space:nowrap}
+footer .fgiant{font-family:'Syne',var(--display);font-weight:800;letter-spacing:-.06em;font-size:min(14.6vw,236px);line-height:.8;text-align:center;margin-top:10px;background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,0) 85%);-webkit-background-clip:text;background-clip:text;color:transparent;user-select:none;white-space:nowrap}
 @media (max-width:980px){footer .wrap.fgrid{grid-template-columns:1fr 1fr}footer .ft-brand{grid-column:1/-1;min-height:0;gap:22px}}
-@media (max-width:560px){footer .wrap.fgrid{grid-template-columns:1fr}footer .ft{min-height:0}footer .ft-acc{aspect-ratio:auto;gap:22px}}
+footer nav.ft{margin-left:0}
+@media (max-width:560px){footer .wrap.fgrid{grid-template-columns:1fr}footer .ft{min-height:0}footer .ft-acc{aspect-ratio:auto;gap:22px}footer .fbar{flex-direction:column;align-items:center;text-align:center;gap:10px}footer .fbar-l{justify-content:center}}
 
 .item.inv .grow .track{display:block;margin-top:6px;max-width:260px}
 .item .adj{display:inline-flex;gap:4px}
@@ -1194,7 +1195,7 @@ function blob(){const c=cnv(128,128),g=c.getContext('2d'),gr=g.createRadialGradi
 function loop(renderer,host,frame){let vis=false,acc=0,n=0,ratio=renderer.getPixelRatio(),last=performance.now();
   new IntersectionObserver(e=>{vis=e[0].isIntersecting;last=performance.now()},{rootMargin:'100px'}).observe(host);
   function tick(now){requestAnimationFrame(tick);if(!vis||panelOpen||document.hidden){last=now;return}const dt=Math.min(.05,(now-last)/1000);last=now;
-    acc+=dt;n++;if(n===50){const avg=acc/n;if(avg>.026&&ratio>.8){ratio=Math.max(.8,ratio-.3);renderer.setPixelRatio(ratio);host.dispatchEvent(new Event('mx-resize'))}acc=0;n=0}
+    acc+=dt;n++;if(n===40){const avg=acc/n;if(avg>.022&&ratio>.6){ratio=Math.max(.6,+(ratio-.2).toFixed(2));renderer.setPixelRatio(ratio);host.dispatchEvent(new Event('mx-resize'))}acc=0;n=0}
     if(frame(dt,now/1000)===false){acc-=dt;n--}}
   requestAnimationFrame(tick)}
 
@@ -1436,9 +1437,11 @@ function loop(renderer,host,frame){let vis=false,acc=0,n=0,ratio=renderer.getPix
   const curveB=new THREE.QuadraticBezierCurve3(kdsW.clone().add(V(0,0,1)),V(4,30,-30),wphoneW.clone());
   function size(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.fov=cam.aspect<.9?44:34;cam.updateProjectionMatrix()}
   size();new ResizeObserver(size).observe(host);host.addEventListener('mx-resize',size);
-  let step=-1,lastP=-1;host.addEventListener('mx-resize',()=>lastP=-1);new ResizeObserver(()=>lastP=-1).observe(host);
+  let step=-1,lastP=-1,pS=-1;host.addEventListener('mx-resize',()=>lastP=-1);new ResizeObserver(()=>lastP=-1).observe(host);
   loop(renderer,host,(dt,t)=>{
-    const r=sec.getBoundingClientRect(),span=sec.offsetHeight-innerHeight,p=clamp(-r.top/span,0,1);
+    const r=sec.getBoundingClientRect(),span=sec.offsetHeight-innerHeight,pt=clamp(-r.top/span,0,1);
+    if(pS<0||reduce)pS=pt;else{pS+=(pt-pS)*(1-Math.exp(-dt*(mobile?5:6)));if(Math.abs(pt-pS)<.00015)pS=pt}
+    const p=pS;
     const live=!reduce&&((p>.05&&p<.18)||(p>.45&&p<.64));
     if(Math.abs(p-lastP)<.0003&&!live)return false;lastP=p;
     const s=p<.14?0:p<.28?1:p<.4?2:p<.6?3:p<.8?4:5;
