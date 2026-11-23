@@ -1161,6 +1161,41 @@ function VReserva({id}){
    RUTAS, PERMISOS Y RELOJ
    ===================================================================== */
 const app = document.getElementById("app");
+/* Redibujado sin parpadeos: en vez de borrar y crear toda la pantalla en cada cambio, se compara con la que hay
+   y solo se toca lo que cambia. Las fotos no se recargan, las animaciones no se repiten y no se pierde el foco. */
+const Morph = {
+  mismo(a,b){ return a.nodeType===b.nodeType && (a.nodeType!==1 || (a.tagName===b.tagName && (a.id||"")===(b.getAttribute("id")||"") && (a.getAttribute("type")||"")===(b.getAttribute("type")||""))); },
+  attrs(a,b){
+    for(const at of [...a.attributes]) if(!b.hasAttribute(at.name)) a.removeAttribute(at.name);
+    for(const at of b.attributes) if(a.getAttribute(at.name)!==at.value) a.setAttribute(at.name,at.value);
+  },
+  control(a,b){ const foco=document.activeElement===a;
+    if(a.tagName==="INPUT"){ const t=(a.type||"").toLowerCase();
+      if(t==="checkbox"||t==="radio") a.checked=b.hasAttribute("checked");
+      else if(t!=="file" && !foco){ const v=b.getAttribute("value")??""; if(a.value!==v) a.value=v; } }
+    else if(a.tagName==="TEXTAREA"){ if(!foco && a.value!==b.textContent) a.value=b.textContent; }
+    else if(a.tagName==="SELECT" && !foco){ const o=[...b.options].findIndex(o=>o.hasAttribute("selected")); a.selectedIndex=o>=0?o:(a.options.length?0:-1); } },
+  hijos(a,b){
+    const B=[...b.childNodes];
+    for(let i=0;i<B.length;i++){ const bn=B[i], an=a.childNodes[i];
+      if(!an){ a.appendChild(bn); continue; }
+      if(!this.mismo(an,bn)){ a.replaceChild(bn,an); continue; }
+      if(an.nodeType!==1){ if(an.nodeValue!==bn.nodeValue) an.nodeValue=bn.nodeValue; continue; }
+      this.attrs(an,bn);
+      if(an.tagName!=="TEXTAREA") this.hijos(an,bn);
+      this.control(an,bn);
+    }
+    while(a.childNodes.length>B.length) a.removeChild(a.lastChild);
+  },
+  poner(el,html){ const t=document.createElement("template"); t.innerHTML=html; const B=t.content;
+    // la primera vez, o si la pantalla es otra completamente distinta, se pinta de golpe
+    if(!el.firstChild){ el.appendChild(B); return; }
+    this.hijos(el,B); },
+  // Engancha el redibujado sin parpadeos a un contenedor: sus «innerHTML = ...» pasan a comparar y actualizar
+  activar(el){ const d=Object.getOwnPropertyDescriptor(Element.prototype,"innerHTML");
+    Object.defineProperty(el,"innerHTML",{configurable:true, get(){ return d.get.call(this); }, set(h){ try{ Morph.poner(this,String(h)); }catch(e){ d.set.call(this,h); } }}); }
+};
+Morph.activar(app);
 let vista=null;
 function ruta(){
   const h=(location.hash||"#inicio").slice(1); let m;
@@ -1477,7 +1512,7 @@ function VInicio(){
    VISTA: CARTA PÚBLICA
    ===================================================================== */
 function VCarta(){
-  const quitados=new Set(); let q="", onScroll, clic;
+  const quitados=new Set(), enganchados=new WeakSet(); let q="", onScroll, clic;
   function filtrar(){
     const qq=norm(q); let vis=0;
     app.querySelectorAll(".plato").forEach(el=>{ const al=el.dataset.al?el.dataset.al.split(" "):[]; const ok=(!qq||el.dataset.txt.includes(qq))&&!al.some(x=>quitados.has(x)); el.hidden=!ok; if(ok) vis++; });
@@ -1523,8 +1558,9 @@ function VCarta(){
       <section class="leyenda" aria-labelledby="ley"><h2 id="ley">${T("alergenos")}</h2><ul>${Object.keys(ALERGENOS).map(k=>`<li><span class="al"><i style="background:${ALERGENOS[k].c}">${ALERGENOS[k].l}</i></span>${alN(k)}</li>`).join("")}</ul><p>${T("leyAl")}</p></section>
       <footer>${safeUrl(bar.google)?`<a class="btn" href="${esc(safeUrl(bar.google))}">${ico("star")}${T("opinar")}</a>`:""}<p class="firma">${esc(bar.nombre)} · ${esc(bar.ciudad)}</p><p style="font-size:15px;color:var(--tinta-3)">Carta de ejemplo: los platos y precios se sustituyen por los reales.</p></footer>
     </div>`;
-    const inp=app.querySelector("#q"); inp.value=q; inp.addEventListener("input",()=>{ q=inp.value; filtrar(); });
-    app.querySelector("#filtros").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return; const on=b.getAttribute("aria-pressed")!=="true"; b.setAttribute("aria-pressed",on); on?quitados.add(b.dataset.k):quitados.delete(b.dataset.k); filtrar(); });
+    const inp=app.querySelector("#q"); if(document.activeElement!==inp) inp.value=q;
+    if(!enganchados.has(inp)){ enganchados.add(inp); inp.addEventListener("input",()=>{ q=inp.value; filtrar(); }); }
+    const fil=app.querySelector("#filtros"); if(!enganchados.has(fil)){ enganchados.add(fil); fil.addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return; const on=b.getAttribute("aria-pressed")!=="true"; b.setAttribute("aria-pressed",on); on?quitados.add(b.dataset.k):quitados.delete(b.dataset.k); filtrar(); }); }
     filtrar(); activa(); if(y) window.scrollTo(0,y);
   }
   clic=e=>{
@@ -2122,7 +2158,7 @@ const Comanda = {
         +`<button class="cx-env" data-x-enviar ${c?"":"disabled"}>${c?`Enviar · ${eur(this.total())}<small>${[d.cocina?`${d.cocina} a cocina`:"",d.barra?`${d.barra} a barra`:""].filter(Boolean).join(" · ")}</small>`:"Añade algo para enviar"}</button>`; }
     return `<div class="cx-barra"><button class="cx-ver" data-x-cesta ${c?"":"disabled"}><i>${c}</i><span>${c?"Ver comanda":"Comanda vacía"}</span><b>${eur(this.total())}</b></button><button class="cx-env cx-env-p" data-x-enviar ${c?"":"disabled"}>Enviar</button></div>`; },
   pintar(){
-    if(!this.el){ const d=document.createElement("div"); d.id="comanda-ui"; d.addEventListener("click",e=>this.clic(e)); d.addEventListener("input",e=>this.entrada(e)); document.body.appendChild(d); this.el=d; document.body.classList.add("cx-abierta"); }
+    if(!this.el){ const d=document.createElement("div"); d.id="comanda-ui"; Morph.activar(d); d.addEventListener("click",e=>this.clic(e)); d.addEventListener("input",e=>this.entrada(e)); document.body.appendChild(d); this.el=d; document.body.classList.add("cx-abierta"); }
     const yo=this.por;
     if(!this.n){ const todas=Array.from({length:mesasN()},(_,i)=>mesa(i+1)), mias=todas.filter(m=>camDe(m.n)===yo), resto=todas.filter(m=>camDe(m.n)!==yo);
       const b=m=>`<button data-x-mesa="${m.n}" class="${m.abierta?"oc":""}"><b>${m.n}</b><small>${m.abierta?(camDe(m.n)&&camDe(m.n)!==yo?esc(nomCam(camDe(m.n))):"ocupada"):"libre"}</small></button>`;
