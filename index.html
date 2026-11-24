@@ -413,7 +413,8 @@ footer .fbar{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
 footer .fbar a{color:#a1a1a6;text-decoration:none}footer .fbar-l{display:flex;gap:20px}footer .fbar a:hover{color:#fff}
 footer .fgiant{font-family:'Syne',var(--display);font-weight:800;letter-spacing:-.06em;font-size:min(14.6vw,236px);line-height:.8;text-align:center;margin-top:10px;background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,0) 85%);-webkit-background-clip:text;background-clip:text;color:transparent;user-select:none;white-space:nowrap}
 @media (max-width:980px){footer .wrap.fgrid{grid-template-columns:1fr 1fr}footer .ft-brand{grid-column:1/-1;min-height:0;gap:22px}}
-footer nav.ft{margin-left:0}
+footer nav.ft{margin-left:0;flex-wrap:nowrap;gap:10px}
+footer .wrap.fgrid{grid-auto-rows:auto}footer .wrap.fgrid>.ft{height:auto}footer .ft-acc{aspect-ratio:auto;min-height:250px}
 @media (max-width:560px){footer .wrap.fgrid{grid-template-columns:1fr}footer .ft{min-height:0}footer .ft-acc{aspect-ratio:auto;gap:22px}footer .fbar{flex-direction:column;align-items:center;text-align:center;gap:10px}footer .fbar-l{justify-content:center}}
 
 .item.inv .grow .track{display:block;margin-top:6px;max-width:260px}
