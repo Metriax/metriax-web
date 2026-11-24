@@ -419,6 +419,8 @@ const cfgReglas = () => ({...REGLAS_DEF,...(Store.get("config","reglas")||{})});
 const mesasN = () => Math.max(1,Math.min(99,+cfgBar().mesas||20));
 const zonaDe = n => n<=+cfgBar().interiorHasta?"Interior":"Terraza";
 const cams = () => cfgBar().camareros;
+// ¿La carta que se ve es la de ejemplo? (solo entonces se avisa al cliente en el pie de la carta)
+const esCartaEjemplo = () => JSON.stringify(cfgCarta().platos)===(esCartaEjemplo.j||(esCartaEjemplo.j=JSON.stringify(PLATOS_DEF)));
 const cfgCarta = () => { const c=Store.get("config","carta")||{}; return {secciones:(Array.isArray(c.secciones)&&c.secciones.length)?c.secciones:SECCIONES_DEF, platos:Array.isArray(c.platos)?c.platos:PLATOS_DEF, agotados:c.agotados||{}}; };
 const secciones = () => cfgCarta().secciones;
 // «Fuera de carta»: platos o bebidas por tiempo limitado (config/temporal). Se añaden a la carta del cliente sin tocar la carta fija.
@@ -571,8 +573,8 @@ const Acc = {
   async pedirLlevar(datos, carrito, sugs){
     const t0=inicioDia(), id=nid(), t=ahora(), items=this.lineas(carrito,sugs);
     // Con base de datos el cliente no ve los demás pedidos: el código es aleatorio y corto
-    const codigo="L-"+(Store.personal()?String(Store.all("pedidos").filter(p=>p.llevar && p.t>=t0).length+1).padStart(2,"0"):tokenNuevo().slice(0,3).toUpperCase());
-    const ped={id,t,mesa:0,llevar:true,codigo,nombre:datos.nombre,tel:datos.tel||"",hora:datos.hora,nota:datos.nota||"",items,servido:false,lang:LANG};
+    const codigo="L-"+(Store.personal()?String(Store.all("pedidos").filter(p=>p.llevar && p.t>=t0).length+1).padStart(2,"0"):tokenNuevo().slice(0,5).toUpperCase());
+    const ped={id,t,mesa:0,llevar:true,codigo,nombre:datos.nombre,tel:datos.tel||"",hora:datos.hora,nota:datos.nota||"",items,servido:false,lang:LANG,...(datos.acepto?{acepto:t}:{})};
     if(!await Store.crear("pedidos",id,ped)) return null;
     await Store.crear("avisos","v-"+id,{id:"v-"+id,mesa:0,llevar:true,codigo,tipo:"validar",pedido:id,det:`${datos.nombre} · recoge ${datos.hora} · ${items.map(x=>`${x.q}× ${x.n}`).join(", ")}`,t,atendido:null});
     if(!cfgReglas().validar && Store.personal()) await this.aceptar(id,"auto");
@@ -617,7 +619,8 @@ const Acc = {
     if(Store.personal() && !this._autoPg){ const pg=entrantes().filter(p=>p.pagado && !p.aceptando);
       if(pg.length){ this._autoPg=true; try{ for(const p of pg){ if(await this.reclamar(p.id)) await this.aceptar(p.id,"pago"); } } finally{ this._autoPg=false; } } }
     if(cfgReglas().validar || !Store.personal() || this._auto) return;
-    const ps=entrantes().filter(p=>p.llevar||mesa(p.mesa).abierta); if(!ps.length) return;
+    // Los pedidos para llevar llegan sin tarjeta de mesa: siempre los confirma una persona
+    const ps=entrantes().filter(p=>!p.llevar&&mesa(p.mesa).abierta); if(!ps.length) return;
     this._auto=true; try{ for(const p of ps) await this.aceptar(p.id,"auto"); } finally { this._auto=false; }
   },
   llamar(n, tk){ const id=nid(); return Store.crear("avisos",id,{id,mesa:n,tk:tk||"",tipo:"llamada",det:"Pide que se acerque el camarero (recomendación o sugerencia)",t:ahora(),atendido:null}); },
@@ -768,13 +771,15 @@ const sonidoOn = () => { try{ return localStorage.getItem("lp-sonido")!=="0"; }c
 function activarAudio(){ try{ audio=audio||new (window.AudioContext||window.webkitAudioContext)(); audio.resume(); }catch(e){} }
 // Los navegadores bloquean el audio hasta el primer toque: se desbloquea con cualquier toque o tecla
 ["pointerdown","keydown","touchstart"].forEach(ev=>addEventListener(ev,()=>{ if(sonidoOn()) activarAudio(); },{passive:true}));
+// Escape cierra la hoja abierta (cesta, cuenta, mesa…) o la comanda, igual que tocar fuera
+addEventListener("keydown",e=>{ if(e.key!=="Escape") return; const x=document.querySelector("#comanda-ui [data-x-cerrar]"); if(x){ x.click(); return; } const f=[...document.querySelectorAll(".hoja-fondo[data-cerrar]")].pop(); if(f) f.click(); });
 function pitido(tipo="aviso"){
   if(sonidoOn()){ try{ activarAudio(); const notas=tipo==="llamada"?[988,1319,988,1319,988,1319]:tipo==="urgente"?[880,660,880]:tipo==="cocina"?[523,784]:[660,880], vol=tipo==="llamada"?0.6:0.25;
     notas.forEach((f,i)=>{ const o=audio.createOscillator(), g=audio.createGain(); o.type="sine"; o.frequency.value=f; o.connect(g); g.connect(audio.destination);
       const t=audio.currentTime+i*0.16; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+0.14); o.start(t); o.stop(t+0.15); }); }catch(e){} }
   try{ navigator.vibrate && navigator.vibrate(tipo==="llamada"?[250,100,250,100,250]:tipo==="urgente"?[120,60,120]:[90]); }catch(e){}
 }
-function toast(t){ const box=document.getElementById("toasts"); box.querySelector(".toast")?.remove(); const d=document.createElement("div"); d.className="toast"; d.setAttribute("role","status"); d.textContent=t; box.appendChild(d); clearTimeout(toast._t); toast._t=setTimeout(()=>d.remove(),3400); }
+function toast(t){ const box=document.getElementById("toasts"); box.querySelector(".toast")?.remove(); const d=document.createElement("div"); d.className="toast"; d.setAttribute("role","status"); d.textContent=t; box.appendChild(d); clearTimeout(toast._t); toast._t=setTimeout(()=>d.remove(),Math.min(9000,Math.max(3400,String(t).length*70))); }
 
 /* =====================================================================
    ICONOS Y DIBUJOS
@@ -835,6 +840,7 @@ const logoHTML = (cls="") => { const b=cfgBar(); return /^data:image\/(png|jpe?g
 function leerLogo(file){
   return new Promise((ok,mal)=>{
     if(!file || !/^image\//.test(file.type)) return mal(new Error("tipo"));
+    if(file.size>10*1024*1024) return mal(new Error("grande"));
     const fr=new FileReader(); fr.onerror=()=>mal(fr.error);
     fr.onload=()=>{ const img=new Image(); img.onerror=()=>mal(new Error("img")); img.onload=()=>{
       const k=Math.min(1,600/Math.max(img.width,img.height)), c=document.createElement("canvas"); c.width=Math.max(1,Math.round(img.width*k)); c.height=Math.max(1,Math.round(img.height*k));
@@ -965,7 +971,7 @@ function reservaProxima(n){
 
 Object.assign(Acc,{
   async reservar(d, origen, por){
-    const id=nid(), r={id,t:ahora(),nombre:d.nombre,tel:d.tel,email:d.email||"",personas:+d.personas,fecha:d.fecha,hora:d.hora,nota:d.nota||"",origen,lang:LANG,
+    const id=nid(), r={id,t:ahora(),nombre:d.nombre,tel:d.tel,email:d.email||"",personas:+d.personas,fecha:d.fecha,hora:d.hora,nota:d.nota||"",origen,lang:LANG,...(d.acepto?{acepto:ahora()}:{}),
       estado:origen==="web"?"pendiente":"confirmada",...(origen==="web"?{}:{mesa:d.mesa?+d.mesa:null,por})};
     return await Store.crear("reservas",id,r) ? id : null;
   },
@@ -1432,7 +1438,7 @@ function sugsHTML(carrito){
 function menuHojaHTML(sel){
   const m=cfgMenu();
   const g=(k,arr,t)=>`<h4>${t}</h4><div class="ops">${arr.map((x,i)=>`<button data-msel="${k}" data-i="${i}" aria-pressed="${sel[k]===i}">${esc(x)}</button>`).join("")}</div>`;
-  return `<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-label="${T("menuDia")}"><div class="asa"></div>
+  return `<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-modal="true" aria-label="${T("menuDia")}"><div class="asa"></div>
     <h3>${T("menuDia")} · ${eur(+m.precio)}</h3><div class="elige">${g("a",m.primeros,T("primeros"))}${g("b",m.segundos,T("segundos"))}${g("c",m.postres,T("postres"))}</div>
     <p style="margin:0;font-size:15px;color:var(--tinta-2)">${T("incluye")}: ${esc(m.incluye)}</p>
     <button class="btn rojo" data-add-menu ${sel.a!=null&&sel.b!=null&&sel.c!=null?"":"disabled"}>${T("anadirMenu")}</button>
@@ -1590,7 +1596,7 @@ function VCarta(){
           ${(p.modelo||p.etq)?`<div class="pie-plato">${p.modelo?`<button class="ver3d" data-3d="${p.id}">${ico("cube")}${T("ver3d")}</button>`:""}${p.etq&&!p.modelo&&LANG==="es"?`<span class="etq">${p.etq}</span>`:""}</div>`:""}</article>`).join("")}</div></section>`).join("")}
       <p class="vacio" id="vacio" hidden>${T("vacio")}</p>
       <section class="leyenda" aria-labelledby="ley"><h2 id="ley">${T("alergenos")}</h2><ul>${Object.keys(ALERGENOS).map(k=>`<li><span class="al"><i style="background:${ALERGENOS[k].c}">${ALERGENOS[k].l}</i></span>${alN(k)}</li>`).join("")}</ul><p>${T("leyAl")}</p></section>
-      <footer>${safeUrl(bar.google)?`<a class="btn" href="${esc(safeUrl(bar.google))}">${ico("star")}${T("opinar")}</a>`:""}<p class="firma">${esc(bar.nombre)} · ${esc(bar.ciudad)}</p><p style="font-size:15px;color:var(--tinta-3)">Carta de ejemplo: los platos y precios se sustituyen por los reales.</p></footer>
+      <footer>${safeUrl(bar.google)?`<a class="btn" href="${esc(safeUrl(bar.google))}">${ico("star")}${T("opinar")}</a>`:""}<p class="firma">${esc(bar.nombre)} · ${esc(bar.ciudad)}</p>${esCartaEjemplo()?`<p style="font-size:15px;color:var(--tinta-3)">Carta de ejemplo: los platos y precios se sustituyen por los reales.</p>`:""}</footer>
     </div>`;
     const inp=app.querySelector("#q"); if(document.activeElement!==inp) inp.value=q;
     if(!enganchados.has(inp)){ enganchados.add(inp); inp.addEventListener("input",()=>{ q=inp.value; filtrar(); }); }
@@ -1666,7 +1672,7 @@ function VMesa({n,tk}){
     if(pg){ q.delete("pago"); history.replaceState(null,"",location.pathname+(q.toString()?"?"+q.toString():"")+location.hash);
       if(pg==="cancel") setTimeout(()=>toast(T("pagoKo")),300);
       else if(/^cs_[A-Za-z0-9_]+$/.test(pg)){ setTimeout(()=>toast(T("pagoConf")),100);
-        (async()=>{ for(let i=0;i<6;i++){ const r=await Remoto.pago({accion:"confirmar",sesion:pg}).catch(()=>null);
+        (async()=>{ const h0=location.hash; for(let i=0;i<6;i++){ const r=await Remoto.pago({accion:"confirmar",sesion:pg}).catch(()=>null); if(location.hash!==h0) return;
           if(r&&r.ok){ if(r.parte){ toast(r.completo?T("parteCompleta"):T("parteOk",eur(r.resto||0))); if(r.pedido){ Store.data.pedidos.set(r.pedido.id,r.pedido); Store.emit(); } setTimeout(()=>comprobar(),500); return; }
             if(r.cuenta){ toast(T(r.cerrada?"pagoTodoOk":"pagoParteOk")); setTimeout(()=>comprobar(),500); st.hoja=cfgReglas().valorar?"valorar":(safeUrl(cfgBar().google)?"google":null); estrellas=0; coment=""; setTimeout(()=>pintar(),700); return; }
             if(r.pedido){ Store.data.pedidos.set(r.pedido.id,r.pedido); Store.emit(); } toast(T("pagoOk")); setTimeout(()=>comprobar(),800); return; }
@@ -1699,11 +1705,11 @@ function VMesa({n,tk}){
       <div class="fila2"><button class="btn peq" data-a="llamar" ${llamado()?"disabled":""}>${ico("bell")}${llamado()?T("avisadoC"):T("llamar")}</button><button class="btn peq amar" data-a="hoja-cuenta" ${cuenta||!(m.consumo&&m.consumo.length)||pendienteMesa(m)<=0?"disabled":""}>${ico("receipt")}${T("pedirCuenta")}</button></div>
     </div>
     ${st.hoja==="cesta"?(()=>{ const L=lineasCesta(), pv=partesViva(), D=parteDiv(), imp=importeCesta(), online=puedePagar(), sel=selCesta(), grupos=[...new Set(L.map(l=>l.de))];
-      return `<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-label="${T("pedidoMesa")}"><div class="asa"></div>
+      return `<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-modal="true" aria-label="${T("pedidoMesa")}"><div class="asa"></div>
       <h3>${T("pedidoMesa")} · ${T("mesa").toLowerCase()} ${n}</h3><p class="cesta-viva"><i></i>${T("cestaViva")}</p>
       ${L.length?grupos.map(d=>`<p class="cesta-quien">${esc(nombreMovil(d))}</p>${L.filter(l=>l.de===d).map(l=>{ const it=item(l.k), mia=d===DISP&&!pv, kk=l.de+"|"+l.k;
-        return `<div class="lin"><span class="q">${l.q}×</span><span>${esc(it.nL||it.n)}</span>${cmodo==="elegir"&&!pv?`<span class="cant"><button data-csel="${esc(kk)}" data-d="-1" aria-label="−">−</button><span>${Math.min(csel[kk]||0,l.q)}</span><button data-csel="${esc(kk)}" data-d="1" aria-label="+">+</button></span>`
-          :mia?`<span class="cant"><button data-menos="${esc(l.k)}" aria-label="−">−</button><span>${eur(it.p*l.q)}</span><button data-mas="${esc(l.k)}" aria-label="+">+</button></span>`:`<span>${eur(it.p*l.q)}</span>`}</div>`; }).join("")}`).join("")
+        return `<div class="lin"><span class="q">${l.q}×</span><span>${esc(it.nL||it.n)}</span>${cmodo==="elegir"&&!pv?`<span class="cant"><button data-csel="${esc(kk)}" data-d="-1" aria-label="${esc(LG("Uno menos","One less","Menos um")+": "+(it.nL||it.n))}">−</button><span>${Math.min(csel[kk]||0,l.q)}</span><button data-csel="${esc(kk)}" data-d="1" aria-label="${esc(LG("Uno más","One more","Mais um")+": "+(it.nL||it.n))}">+</button></span>`
+          :mia?`<span class="cant"><button data-menos="${esc(l.k)}" aria-label="${esc(LG("Uno menos","One less","Menos um")+": "+(it.nL||it.n))}">−</button><span>${eur(it.p*l.q)}</span><button data-mas="${esc(l.k)}" aria-label="${esc(LG("Uno más","One more","Mais um")+": "+(it.nL||it.n))}">+</button></span>`:`<span>${eur(it.p*l.q)}</span>`}</div>`; }).join("")}`).join("")
         :`<p class="mini-ayuda">${T("cestaVacia")}</p>`}
       <div class="total"><span>${T("total")}</span><span>${eur(tCarr())}</span></div>
       ${!pv?sugsHTML(st.carrito):""}
@@ -1714,7 +1720,7 @@ function VMesa({n,tk}){
       :L.length?`<p class="m-texto" style="font-size:16px;margin:4px 0 0">${T("comoPagais")}</p>
         <div class="div-op" role="group" aria-label="${T("comoPagais")}">${[["todo","opTodoYo"],["mio","opMio"],["elegir","opElegir"],["partes","opPartes"]].map(([k,t])=>`<button data-cmodo="${k}" aria-pressed="${cmodo===k}">${T(t)}</button>`).join("")}</div>
         ${cmodo==="mio"&&!sel.length?`<p class="mini-ayuda">${T("nadaMio")}</p>`:""}${cmodo==="elegir"&&!sel.length?`<p class="mini-ayuda">${T("eligeP")}</p>`:""}
-        ${cmodo==="partes"?`<div class="personas"><span>${T("entre")}</span><span class="cant"><button data-cpers="-1" aria-label="−">−</button><span>${cpers}</span><button data-cpers="1" aria-label="+">+</button></span></div>`:""}
+        ${cmodo==="partes"?`<div class="personas"><span>${T("entre")}</span><span class="cant"><button data-cpers="-1" aria-label="${esc(LG("Una persona menos","One person less","Menos uma pessoa"))}">−</button><span>${cpers}</span><button data-cpers="1" aria-label="${esc(LG("Una persona más","One person more","Mais uma pessoa"))}">+</button></span></div>`:""}
         <div class="tu-parte"><span>${cmodo==="todo"?T("totalPagar"):T("tuParte")}</span><b>${eur(imp)}</b></div>
         ${online?`<button class="btn rojo pagar-b" data-a="pagar" ${enviando?"disabled":""}>${ico("card")}${enviando==="pago"?T("pagando"):cmodo==="partes"?T("pagarParteYa",eur(imp)):T("pagarSel",eur(imp))}</button><p class="mini-ayuda">${T(cmodo==="todo"?"pagarYaP":cmodo==="partes"?"partesP":"pagoSelP")}</p>`
           :Store.modo==="supa"&&tk&&conMenu(cmodo==="partes"?L:sel)?`<p class="mini-ayuda">${T("menuFinal")}</p>`:""}
@@ -1723,28 +1729,28 @@ function VMesa({n,tk}){
       <button class="btn peq" data-cerrar-b>${T("seguir")}</button></div></div>`; })():""}
     ${st.hoja==="menu"?menuHojaHTML(st.msel):""}
     ${st.hoja==="cuenta"?(()=>{ const pend=pendienteMesa(m), cons=m.consumo||[], mio=selMio(m), Pt=parteAhora(), online=puedePagarCuenta()&&Pt.importe>=0.5;
-      return `<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-label="${T("laCuenta")}"><div class="asa"></div>
+      return `<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-modal="true" aria-label="${T("laCuenta")}"><div class="asa"></div>
       <h3>${T("laCuenta")} · ${T("mesa").toLowerCase()} ${n}</h3><p class="mini-ayuda" style="text-align:left;margin:0">${T("compartida")}</p>
-      ${cons.map((x,i)=>{ const pq=pqDe(x), libre=x.q-pq; return `<div class="lin ${libre<=0?"pagada":""}"><span class="q">${x.q}×</span><span>${esc(item(x.id).nL||x.n)}${x.de===DISP?` <span class="tuyo">${T("tuyo")}</span>`:""}${libre<=0?` <span class="pg-chip">${T("pagado")}</span>`:pq>0?` <span class="pg-chip">${T("pagadoUds",pq,x.q)}</span>`:""}</span>${modoP==="elegir"&&libre>0?`<span class="cant"><button data-psel="${i}" data-d="-1" aria-label="−">−</button><span>${Math.min(selP[i]||0,libre)}</span><button data-psel="${i}" data-d="1" aria-label="+">+</button></span>`:`<span>${eur(x.p*x.q)}</span>`}</div>`; }).join("")}
+      ${cons.map((x,i)=>{ const pq=pqDe(x), libre=x.q-pq; return `<div class="lin ${libre<=0?"pagada":""}"><span class="q">${x.q}×</span><span>${esc(item(x.id).nL||x.n)}${x.de===DISP?` <span class="tuyo">${T("tuyo")}</span>`:""}${libre<=0?` <span class="pg-chip">${T("pagado")}</span>`:pq>0?` <span class="pg-chip">${T("pagadoUds",pq,x.q)}</span>`:""}</span>${modoP==="elegir"&&libre>0?`<span class="cant"><button data-psel="${i}" data-d="-1" aria-label="${esc(LG("Uno menos","One less","Menos um")+": "+(item(x.id).nL||x.n))}">−</button><span>${Math.min(selP[i]||0,libre)}</span><button data-psel="${i}" data-d="1" aria-label="${esc(LG("Uno más","One more","Mais um")+": "+(item(x.id).nL||x.n))}">+</button></span>`:`<span>${eur(x.p*x.q)}</span>`}</div>`; }).join("")}
       <div class="total"><span>${T("total")}</span><span>${eur(totalMesa(m))}</span></div>
       ${pagadoMesa(m)?`<div class="lin"><span></span><span>${T("yaPagado")}</span><span>−${eur(pagadoMesa(m))}</span></div><div class="total"><span>${T("pendiente")}</span><span>${eur(pend)}</span></div>`:""}
       <p class="m-texto" style="font-size:16px;margin:4px 0 0">${T("quePagas")}</p>
       <div class="div-op" role="group" aria-label="${T("quePagas")}">${[["todo","opTodo"],["mio","opMio"],["elegir","opElegir"],["partes","opPartes"]].map(([k,t])=>`<button data-modo="${k}" aria-pressed="${modoP===k}">${T(t)}</button>`).join("")}</div>
       ${modoP==="mio"?`<p class="mini-ayuda">${Object.keys(mio).length?esc(linTxt(m,Pt.lin)):T("nadaMio")}</p>`:""}
       ${modoP==="elegir"&&!Pt.lin.length?`<p class="mini-ayuda">${T("eligeP")}</p>`:""}
-      ${modoP==="partes"?`<div class="personas"><span>${T("entre")}</span><span class="cant"><button data-pers="-1" aria-label="−">−</button><span>${nPers}</span><button data-pers="1" aria-label="+">+</button></span></div>`:""}
+      ${modoP==="partes"?`<div class="personas"><span>${T("entre")}</span><span class="cant"><button data-pers="-1" aria-label="${esc(LG("Una persona menos","One person less","Menos uma pessoa"))}">−</button><span>${nPers}</span><button data-pers="1" aria-label="${esc(LG("Una persona más","One person more","Mais uma pessoa"))}">+</button></span></div>`:""}
       <div class="tu-parte"><span>${modoP==="todo"?T("totalPagar"):T("tuParte")}</span><b>${eur(Pt.importe)}</b></div>
       ${online?`<button class="btn rojo pagar-b" data-a="pagar-cuenta" ${pagandoP?"disabled":""}>${ico("card")}${pagandoP?T("pagando"):T("pagarYa",eur(Pt.importe))}</button><p class="mini-ayuda">${T(modoP==="todo"?"pagarTodoP":"pagarParteP")}</p>`
         :puedePagarCuenta()&&Pt.importe>0&&Pt.importe<0.5?`<p class="mini-ayuda">${T("minimo")}</p>`:""}
       <p class="m-texto" style="font-size:15px;margin:4px 0 0">${online?T("oCamarero"):T("comoPagar")}</p>
       <div class="pago-op"><button data-forma="tarjeta" aria-pressed="${forma==="tarjeta"}">${ico("card")}${T("tarjeta")}</button><button data-forma="efectivo" aria-pressed="${forma==="efectivo"}">${ico("cash")}${T("efectivo")}</button></div>
       <button class="btn ${online?"":"rojo"}" data-a="cuenta" ${forma&&Pt.importe>0?"":"disabled"}>${modoP==="todo"?T("pedirCuentaA",esc(cam)):T("pedirParteA",esc(cam))}</button><button class="btn peq" data-cerrar-b>${T("ahoraNo")}</button></div></div>`; })():""}
-    ${st.hoja==="valorar"?`<div class="hoja-fondo"><div class="hoja" role="dialog" aria-label="${T("queTal")}"><div class="asa"></div>
+    ${st.hoja==="valorar"?`<div class="hoja-fondo"><div class="hoja" role="dialog" aria-modal="true" aria-label="${T("queTal")}"><div class="asa"></div>
       <h3>${T("queTal")}</h3><p class="m-texto">${T("queTalP")}</p>
       <div class="estrellas" role="group" aria-label="1–5">${[1,2,3,4,5].map(i=>`<button data-estrella="${i}" aria-pressed="${i<=estrellas}" aria-label="${i}">${STAR}</button>`).join("")}</div>
       <label style="font-size:15px">${T("comentario")}<input class="nota-in" id="coment" maxlength="200" value="${esc(coment)}"></label>
       <button class="btn rojo" data-a="valorar" ${estrellas?"":"disabled"}>${T("enviarOp")}</button><button class="btn peq" data-a="saltar">${T("saltar")}</button></div></div>`:""}
-    ${st.hoja==="google"?`<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog"><div class="asa"></div><div class="google-cta"><p class="m-hola" style="text-align:center">${T("gracias")}</p><p class="m-texto">${T("graciasG")}</p><a class="btn rojo" href="${esc(safeUrl(b.google))}">${ico("star")}${T("irGoogle")}</a></div><button class="btn peq" data-cerrar-b>${T("ahoraNo")}</button></div></div>`:""}
+    ${st.hoja==="google"?`<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-modal="true"><div class="asa"></div><div class="google-cta"><p class="m-hola" style="text-align:center">${T("gracias")}</p><p class="m-texto">${T("graciasG")}</p><a class="btn rojo" href="${esc(safeUrl(b.google))}">${ico("star")}${T("irGoogle")}</a></div><button class="btn peq" data-cerrar-b>${T("ahoraNo")}</button></div></div>`:""}
     </div>`;
     st.bump=0; if(y) window.scrollTo(0,y);
   }
@@ -1776,7 +1782,7 @@ function VMesa({n,tk}){
         pagandoP=true; pintar();
         const r=await Remoto.pago({accion:"cuenta",mesa:n,tk,modo:modoP==="todo"?"todo":modoP==="partes"?"partes":"lineas",lin:Pt.lin,n:Pt.n||0,importe:Pt.importe,desde:m.desde,lang:LANG,path:location.pathname,disp:DISP}).catch(()=>null);
         if(r&&r.url){ if(/^https:\/\/checkout\.stripe\.com\//.test(r.url)) location.href=r.url; else toast(T("errPago")||"No se ha podido abrir el pago."); return; }
-        pagandoP=false; toast(r&&(r.error==="cambio"||r.error==="cerrada")?T("cuentaCambio"):T("pagoNoDisp")); if(Store.publico()) comprobar(); break; }
+        pagandoP=false; toast(r&&r.error==="en_curso"?LG("Alguien de la mesa está pagando la cuenta entera. Espera un momento.","Someone at the table is paying the whole bill. Please wait a moment.","Alguém da mesa está a pagar a conta toda. Aguarde um momento."):r&&(r.error==="cambio"||r.error==="cerrada")?T("cuentaCambio"):T("pagoNoDisp")); if(Store.publico()) comprobar(); break; }
       case "ronda": { const ult=[...misPedidos()].reverse().find(p=>estadoPedido(p)>=0&&p.items.some(x=>x.dest==="barra")); if(!ult){ toast(T("tNoBebida")); return; } st.carrito={}; ult.items.filter(x=>x.dest==="barra"&&!agotado(x.id)).forEach(x=>st.carrito[x.id]=x.q); subirCesta(); st.hoja="cesta"; cmodo="todo"; csel={}; break; }
       case "pagar": { nota=(app.querySelector("#nota")?.value||"").trim(); const div=cmodo==="partes"||!!partesViva(), sel=selCesta(), imp=importeCesta();
         if(!div&&!sel.length){ toast(T("nadaSel")); return; } if(!(imp>=0.5)){ toast(T("minimo")); return; }
@@ -1831,7 +1837,7 @@ function VLlevar(){
     app.innerHTML=`<div class="app-mesa">${cab}
       <div class="m-cuerpo"><p class="m-texto">${T("llP")}</p>${catsHTML(st.cat)}${listaCarta(st.cat,st.carrito)}<a class="btn peq" href="#carta" style="justify-self:start">${ico("back")}${T("verCarta")}</a></div>
       <div class="m-pie">${nCarr()?`<button class="btn rojo cesta ${st.bump?"bump":""}" data-a="cesta"><span><span class="n">${nCarr()}</span>${T("verPedido")}</span><span>${eur(tCarr())}</span></button>`:`<p class="m-texto" style="text-align:center;font-size:15px;margin:0">${T("pagaRecoger")}</p>`}</div>
-      ${st.hoja==="cesta"?`<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-label="${T("tuPedido")}"><div class="asa"></div><h3>${T("tuPedido")}</h3>${cestaLineas(st.carrito)}${sugsHTML(st.carrito)}
+      ${st.hoja==="cesta"?`<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-modal="true" aria-label="${T("tuPedido")}"><div class="asa"></div><h3>${T("tuPedido")}</h3>${cestaLineas(st.carrito)}${sugsHTML(st.carrito)}
         <div class="form-ll"><label>${T("nombre")}<input id="ll-nombre" autocomplete="given-name" value="${esc(datos.nombre)}" required></label>
         <label>${T("tel")}<input id="ll-tel" type="tel" autocomplete="tel" value="${esc(datos.tel)}"></label>
         <label>${T("hora")}<select id="ll-hora"><option value="${T("loAntes")}">${T("loAntes")}</option>${horasRecogida().map(h=>`<option ${datos.hora===h?"selected":""}>${h}</option>`).join("")}</select></label>
@@ -1971,7 +1977,7 @@ function VCamarero(){
     if(await clicValidar(t,yo)) return;
     if(await clicReserva(t,yo)) return;
     const ok=t.closest("[data-ok]"); if(ok){ const a=Store.get("avisos",ok.dataset.ok); await Acc.atender(ok.dataset.ok,yo); if(a&&!a.info&&a.tipo!=="validar") toast(a.tipo==="llamada"?`Te encargas de la mesa ${a.mesa}. Suma en tu ranking.`:`Vas a la mesa ${a.mesa}. Los demás ya no lo ven.`); return; }
-    const sv=t.closest("[data-servir]"); if(sv){ const a=Store.get("avisos",sv.dataset.servir); await Acc.servir(sv.dataset.servir,yo); toast(a.llevar?`${a.codigo} entregado y cobrado.`:`Mesa ${a.mesa}: servido. El cliente lo ve en su móvil.`); return; }
+    const sv=t.closest("[data-servir]"); if(sv){ const a=Store.get("avisos",sv.dataset.servir); await Acc.servir(sv.dataset.servir,yo); toast(a&&a.llevar?`${a.codigo} entregado y cobrado.`:`Mesa ${a?a.mesa:""}: servido. El cliente lo ve en su móvil.`); return; }
     if(t.closest("[data-tomar]")) return Comanda.abrir(null,yo);
     const nm=t.closest("[data-nota-mesa]"); if(nm){ const n=+nm.dataset.notaMesa; hojaMesa=null; pintar(); return Comanda.abrir(n,yo); }
     const mb=t.closest("[data-mesa]"); if(mb){ hojaMesa=+mb.dataset.mesa; return pintar(); }
@@ -2009,7 +2015,7 @@ function pagosHTML(m){
 // Hoja de una mesa: pedidos por confirmar, lo consumido y cobrar (la mesa vuelve a estar libre)
 function hojaMesaHTML(n,quien){
   const m=mesa(n), ent=porConfirmar().filter(p=>p.mesa===n&&!p.llevar), cu=cuentaDe(n), rp=reservaProxima(n), tot=totalMesa(m);
-  return `<div class="hoja-fondo" data-cerrar><div class="hoja ui" role="dialog" aria-label="Mesa ${n}"><div class="asa"></div>
+  return `<div class="hoja-fondo" data-cerrar><div class="hoja ui" role="dialog" aria-modal="true" aria-label="Mesa ${n}"><div class="asa"></div>
     <div style="display:flex;justify-content:space-between;align-items:center"><h3 style="font-family:var(--display);font-size:26px;color:var(--rojo);margin:0">Mesa ${n}</h3><span class="pill">${zonaDe(n)} · ${esc(nomCamMesa(n))}</span></div>
     ${rp?`<p class="pill ok" style="justify-self:start">${ico("calendar")} Reserva ${esc(rp.hora)} · ${esc(rp.nombre)} (${rp.personas})</p>`:""}
     ${ent.map(p=>`<div class="entrante-c"><b>Pedido por confirmar · hace <span data-desde="${p.t}">${mmss(ahora()-p.t)}</span></b><span>${p.items.map(x=>`${x.q}× ${esc(x.n)}`).join(", ")}${p.nota?` · «${esc(p.nota)}»`:""}</span>${botonesValidar(p.id)}</div>`).join("")}
@@ -2193,11 +2199,11 @@ const Comanda = {
     const yo=this.por;
     if(!this.n){ const todas=Array.from({length:mesasN()},(_,i)=>mesa(i+1)), mias=todas.filter(m=>camDe(m.n)===yo), resto=todas.filter(m=>camDe(m.n)!==yo);
       const b=m=>`<button data-x-mesa="${m.n}" class="${m.abierta?"oc":""}"><b>${m.n}</b><small>${m.abierta?(camDe(m.n)&&camDe(m.n)!==yo?esc(nomCam(camDe(m.n))):"ocupada"):"libre"}</small></button>`;
-      this.el.innerHTML=`<div class="cx" role="dialog" aria-label="Tomar comanda"><div class="cx-cab"><div><small>Tomar comanda</small><h3>¿Qué mesa?</h3></div><button class="cx-x" data-x-cerrar aria-label="Cerrar">✕</button></div>
+      this.el.innerHTML=`<div class="cx" role="dialog" aria-modal="true" aria-label="Tomar comanda"><div class="cx-cab"><div><small>Tomar comanda</small><h3>¿Qué mesa?</h3></div><button class="cx-x" data-x-cerrar aria-label="Cerrar">✕</button></div>
         <div class="cx-scroll">${mias.length?`<p class="cx-tit">Tus mesas</p><div class="cx-mesas">${mias.map(b).join("")}</div>`:""}<p class="cx-tit">${mias.length?"Resto de la sala":"Sala"}</p><div class="cx-mesas">${resto.map(b).join("")}</div></div></div>`; return; }
     const g=this.grupos(), tabs=[["rapido","Rápido"],...(g.bebidas.length?[["bebidas","Bebidas"]]:[]),...(g.comida.length?[["comida","Comida"]]:[])];
     const scrollY=(this.el.querySelector(".cx-scroll")||{}).scrollTop||0, mismo=this._ult===this.tab+"|"+(this.sub[this.tab]||"")+"|"+this.q;
-    this.el.innerHTML=`<div class="cx" role="dialog" aria-label="Comanda de la mesa ${this.n}">
+    this.el.innerHTML=`<div class="cx" role="dialog" aria-modal="true" aria-label="Comanda de la mesa ${this.n}">
       <div class="cx-cab"><div><small>${esc(zonaDe(this.n))} · ${esc(nomCam(yo)||"Barra")}</small><h3>Mesa ${this.n} <button class="cx-link" data-x-cambiar>Cambiar</button></h3></div><button class="cx-x" data-x-cerrar aria-label="Cerrar">✕</button></div>
       <div class="cx-tabs" role="tablist">${tabs.map(([k,t])=>`<button role="tab" data-x-tab="${k}" aria-selected="${!this.q&&this.tab===k}">${t}</button>`).join("")}<label class="cx-bus"><span class="oculto">Buscar</span><input type="search" id="cx-bus" placeholder="Buscar…" value="${esc(this.q)}" autocomplete="off"></label></div>
       <div class="cx-scroll">${this.cuerpo()}</div>
@@ -2305,7 +2311,7 @@ function VKds({dest}){
     if(e.target.closest("[data-imprimir]")){ try{ localStorage.setItem(kImp,imprimirOn()?"0":"1"); if(imprimirOn()){ const ya=impresos(); tks().forEach(k=>{ if(!ya.has(k.id)) marcarImpreso(k.id); }); } }catch(_){} toast(imprimirOn()?"Se imprimirán solos los pedidos pagados que lleguen.":"Impresión automática apagada."); return pintar(); }
     const im=e.target.closest("[data-imp]"); if(im){ const k=Store.get("tickets",im.dataset.imp); if(k) imprimir(k); return; }
     const em=e.target.closest("[data-emp]"); if(em) return Acc.ticket(em.dataset.emp,"preparando");
-    const li=e.target.closest("[data-listo]"); if(li){ const k=Store.get("tickets",li.dataset.listo); await Acc.ticket(li.dataset.listo,"listo"); toast(`${lugar(k)} listo. Avisado ${k.llevar?"en barra":camDe(k.mesa)?nomCam(camDe(k.mesa)):"el personal de sala"}.`); }
+    const li=e.target.closest("[data-listo]"); if(li){ const k=Store.get("tickets",li.dataset.listo); await Acc.ticket(li.dataset.listo,"listo"); if(k) toast(`${lugar(k)} listo. Avisado ${k.llevar?"en barra":camDe(k.mesa)?nomCam(camDe(k.mesa)):"el personal de sala"}.`); }
   }
   function cambioF(e){ if(e.target.id==="yo-f" && !fijoF){ yoF=e.target.value; try{ localStorage.setItem("metriax-yo",yoF); }catch(_){} seguroSalida=false; pintar(); } }
   app.addEventListener("click",clic); app.addEventListener("change",cambioF);
@@ -2472,7 +2478,7 @@ function VPanel(){
   function filaReceta(r={}){ return `<div class="rec-fila"><select class="campo" data-rec-a aria-label="Ingrediente">${optArt(r.a)}</select><input class="campo precio-in" type="number" min="0" step="any" data-rec-q value="${r.q??""}" aria-label="Cantidad"><span class="ud">${r.a&&ART(r.a)?ART(r.a).ud:""}</span><button type="button" class="b-ui claro peq-ui" data-quitar-rec aria-label="Quitar ingrediente">×</button></div>`; }
   function hojaPlato(id){
     const p=cfgCarta().platos.find(x=>x.id===id); if(!p){ editPlato=null; return ""; }
-    return `<div class="hoja-fondo" data-cerrar><div class="hoja ui hoja-ancha" role="dialog" aria-label="Editar ${esc(p.n)}"><div class="asa"></div><h3 style="font-family:var(--display);color:var(--rojo);margin:0;font-size:24px">Editar plato</h3>
+    return `<div class="hoja-fondo" data-cerrar><div class="hoja ui hoja-ancha" role="dialog" aria-modal="true" aria-label="Editar ${esc(p.n)}"><div class="asa"></div><h3 style="font-family:var(--display);color:var(--rojo);margin:0;font-size:24px">Editar plato</h3>
       <form class="form-aj" id="f-edit-plato">
         <label>Nombre<input id="ep-n" value="${esc(p.n)}" maxlength="60" required></label>
         <label>Precio (€)<input id="ep-p" type="number" min="0" step="0.1" value="${+p.p||0}" required></label>
@@ -2796,7 +2802,7 @@ function VPanel(){
         ${(c.lineas||[]).map(l=>{ const a=ART(l.a); return a?`<tr><td>${esc(a.n)}</td><td style="text-align:right"><input class="campo precio-in" type="number" min="0" step="any" value="${l.q}" data-rq="${l.a}"> ${a.ud}</td><td style="text-align:right"><input class="campo precio-in" type="number" min="0" step="0.001" value="${l.coste}" data-rc="${l.a}"> €</td></tr>`:""; }).join("")}</tbody></table>
         <label class="check-l" style="display:flex;gap:8px;margin:10px 0"><input type="checkbox" id="rc-coste" checked> Actualizar el coste de los artículos con estos precios</label>
         <div class="acc-fila"><button class="b-ui verde" type="submit">${ico("check")}Recibido: subir stock</button><button type="button" class="b-ui claro" data-cerrar-b>Cancelar</button></div></form>`; }
-    return `<div class="hoja-fondo" data-cerrar><div class="hoja ui hoja-ancha hoja-neg" role="dialog"><div class="asa"></div>${cuerpo}</div></div>`;
+    return `<div class="hoja-fondo" data-cerrar><div class="hoja ui hoja-ancha hoja-neg" role="dialog" aria-modal="true"><div class="asa"></div>${cuerpo}</div></div>`;
   }
   async function cargarEjemploInv(){
     const pid=nid(), pid2=nid()+"b", pid3=nid()+"c";
@@ -2834,7 +2840,7 @@ function VPanel(){
       if(tel) window.open(`https://wa.me/${tel.length===9?"34"+tel:tel}?text=${encodeURIComponent(txt)}`,"_blank","noopener"); toast(tel?"Pedido copiado y abierto en WhatsApp.":"Pedido copiado: pégalo en tu mensaje o correo al proveedor."); return pintar(true),true; }
     const xc=t.closest("[data-cancelar-compra]"); if(xc){ if(!xc.dataset.seguro){ xc.dataset.seguro=1; xc.textContent="¿Seguro?"; return true; } const c=Store.get("compras",xc.dataset.cancelarCompra); await Store.set("compras",c.id,{...c,estado:"cancelado"}); return pintar(true),true; }
     if(t.closest("[data-quitar-pins]")){ await Store.set("config","seguridad",{}); Pin.salir(); toast("PIN quitados: las pantallas quedan abiertas en este navegador."); return pintar(true),true; }
-    if(t.closest("[data-gen-pass]")){ const i=app.querySelector("#cu-pass"); if(i) i.value=tokenNuevo().slice(0,6)+"-"+tokenNuevo().slice(0,5)+(Math.floor(Math.random()*90)+10); return true; }
+    if(t.closest("[data-gen-pass]")){ const i=app.querySelector("#cu-pass"); if(i) i.value=tokenNuevo().slice(0,6)+"-"+tokenNuevo().slice(0,5)+(10+crypto.getRandomValues(new Uint8Array(1))[0]%90); return true; }
     return false;
   }
   async function cambioNeg(t){
@@ -2875,7 +2881,7 @@ function VPanel(){
       const body={tenant:TENANT,email:correoLocal(u),password:claveSupa(pw),rol:v("#cu-rol"),cam:v("#cu-cam")};
       try{ const {data,error}=await Store.sb.functions.invoke("crear-usuario",{body}); if(error||!data||!data.ok) throw (data&&data.error)||error;
         toast(`Cuenta creada: entra con «${u}» y su contraseña.`); equipo=null; f.reset(); }
-      catch(err){ const m={ya_existe:"Ese usuario ya tiene cuenta: asígnale el rol desde el panel maestro.",contraseña_debil:"Contraseña demasiado débil.",sin_permiso:"Solo el dueño puede crear cuentas.",restaurante_parado:"El restaurante está suspendido: no se pueden crear cuentas."}[err]; toast(m||"No se ha podido crear. ¿Está publicada la función crear-usuario en Supabase?"); }
+      catch(err){ const m={ya_existe:"Ese usuario ya tiene cuenta: asígnale el rol desde el panel maestro.",contraseña_debil:"Contraseña demasiado débil.",sin_permiso:"Solo el dueño puede crear cuentas.",restaurante_parado:"El restaurante está suspendido: no se pueden crear cuentas.",correo_local:"Escribe un usuario corto (por ejemplo «ana»), sin @."}[err]; toast(m||"No se ha podido crear. ¿Está publicada la función crear-usuario en Supabase?"); }
       return pintar(true),true; }
     if(f.id==="f-pass"){ const a=v("#np1"), b=v("#np2"); if(a!==b) return toast("Las dos contraseñas no coinciden."),true; if(!(a.length>=10&&/[a-z]/i.test(a)&&/\d/.test(a))) return toast("Usa 10+ caracteres con letras y números."),true;
       const {error}=await Store.sb.auth.updateUser({password:a}); toast(error?"No se ha podido cambiar: "+error.message:"Contraseña cambiada."); f.reset(); return true; }
@@ -2928,7 +2934,7 @@ function VPanel(){
   function hojaAdminHTML(){
     if(!pideAdmin) return "";
     const supa=Store.modo==="supa";
-    return `<div class="hoja-fondo" data-adm-fondo><div class="hoja hoja-adm" role="dialog" aria-label="Administración"><div class="asa"></div>
+    return `<div class="hoja-fondo" data-adm-fondo><div class="hoja hoja-adm" role="dialog" aria-modal="true" aria-label="Administración"><div class="asa"></div>
       <h3>${ico("lock")} Administración</h3>
       <p style="margin:0;font-size:15px;color:var(--tinta-2)">Caja, informes, inventario, compras, carta y ajustes. Solo para el encargado o el dueño.</p>
       <form id="f-admin" class="form-ll" autocomplete="off">
@@ -3104,7 +3110,7 @@ function VPanel(){
       await Acc.enlaces(false);
       document.activeElement?.blur(); toast("Ajustes guardados. Se aplican al momento en todas las pantallas."); return pintar(true); }
     if(f.id==="f-chat"){ const txt=v("#chat-txt").trim(); if(!txt) return; await Acc.chat(txt,"bar",Store.sesion?.user?.email||cfgBar().nombre); f.reset(); pintar(true); app.querySelector("#chat-txt")?.focus(); return; }
-    if(f.id==="f-equipo"){ const email=v("#eq-email").trim(), rol=v("#eq-rol");
+    if(f.id==="f-equipo"){ const email=correoLocal(v("#eq-email").trim()), rol=v("#eq-rol");
       try{ const {data,error}=await Store.sb.rpc("asignar_miembro",{p_tenant:TENANT,p_email:email,p_rol:rol}); if(error) throw error;
         if(data==="no_existe") return toast("No hay ninguna cuenta con ese correo. Pide a soporte que la cree.");
         toast(`${email} ya tiene acceso como ${ROLES[rol]}.`); equipo=null; return pintar(true); }catch(_){ toast("No se ha podido dar acceso."); } }
@@ -3167,12 +3173,12 @@ const Maestro = {
     const activo=estado==="activo"||estado==="aviso";
     if(Store.modo==="supa"){ const {error}=await Store.sb.rpc("cambiar_estado",{p_slug:slug,p_estado:estado,p_nota:nota||""}); if(error) throw error; }
     else Local.guardarRegistro(Local.registro().map(r=>r.slug===slug?{...r,activo,estado}:r));
-    const bar=(await this.leer(slug,"config")).bar||{...BAR_DEF}; await this.escribir(slug,"config","bar",{...bar,activo});
+    const bar=(await this.leer(slug,"config")).bar; if(bar) await this.escribir(slug,"config","bar",{...bar,activo});
   },
   async activar(slug,activo){
     if(Store.modo==="supa"){ const {error}=await Store.sb.from("restaurantes").update({activo}).eq("slug",slug); if(error) throw error; }
     else Local.guardarRegistro(Local.registro().map(r=>r.slug===slug?{...r,activo}:r));
-    const bar=(await this.leer(slug,"config")).bar||{...BAR_DEF}; await this.escribir(slug,"config","bar",{...bar,activo});
+    const bar=(await this.leer(slug,"config")).bar; if(bar) await this.escribir(slug,"config","bar",{...bar,activo});
   },
   async notas(slug,cambios){
     if(Store.modo==="supa"){ const {error}=await Store.sb.from("restaurantes").update(cambios).eq("slug",slug); if(error) throw error; }

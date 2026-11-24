@@ -87,7 +87,8 @@
     av.textContent="Si ese correo tiene cuenta, te llegará un enlace para crear una contraseña nueva."; av.hidden=false;
   });
 
-  $("salir").addEventListener("click", async () => { await sb.auth.signOut(); $("sesion").hidden=true; $("f").hidden=false; });
+  // Cierra la sesión solo en este navegador (sin scope:"local" se cerraba también en la tablet y el móvil de esa persona)
+  $("salir").addEventListener("click", async () => { await sb.auth.signOut({ scope:"local" }); $("sesion").hidden=true; $("f").hidden=false; });
   // Solo se pide crear contraseña si viene de "He olvidado mi contraseña" o de una invitación que aún no la tiene.
   if(vieneDeCorreo){
     sb.auth.getSession().then(({data}) => {
