@@ -650,6 +650,9 @@ const Acc = {
   },
   // Fichaje del personal: entrada, pausa, volver y salida (el cronómetro cuenta solo el tiempo trabajado)
   async fichar(cam, accion){
+    // Con base de datos ficha el servidor (fichar(): su hora y la persona de la sesión; solo el dueño ficha por otros)
+    if(Store.modo==="supa"){ const {data,error}=await Store.sb.rpc("fichar",{p_tenant:TENANT,p_accion:accion,p_cam:cam||null}); if(error) throw error;
+      if(data&&data.id){ Store.data.fichajes.set(String(data.id),data); Store.emit(); } return data; }
     const f=fichajeAbierto(cam), t=ahora();
     if(accion==="entrada"){ if(f) return; const id=nid(); return Store.set("fichajes",id,{id,cam,ini:t,pausas:[],fin:null}); }
     if(!f) return;
@@ -2064,19 +2067,16 @@ function VFichar(){
   const nombre=()=>quien?nomCam(quien):"";
   async function leer(){
     if(!supa) return fichajeAbierto(quien)||null;
-    const {data,error:e}=await sb2.from("docs").select("data").eq("tenant",TENANT).eq("col","fichajes").order("updated_at",{ascending:false}).limit(80);
-    if(e) throw e; return (data||[]).map(r=>r.data).find(x=>x&&x.cam===quien&&!x.fin)||null;
+    // El servidor busca el fichaje abierto de quien ha entrado (fichar() con «estado» no cambia nada)
+    const {data,error:e}=await sb2.rpc("fichar",{p_tenant:TENANT,p_accion:"estado"});
+    if(e) throw e; return data||null;
   }
   async function aplicar(a){
-    const t=ahora();
     if(!supa){ await Acc.fichar(quien,a); f=fichajeAbierto(quien)||Store.all("fichajes").filter(x=>x.cam===quien).sort((x,y)=>y.ini-x.ini)[0]||null; return; }
-    let nuevo=f?{...f,pausas:(f.pausas||[]).map(x=>({...x}))}:null;
-    if(a==="entrada"){ if(f) return; nuevo={id:nid(),cam:quien,ini:t,pausas:[],fin:null}; }
-    else if(!nuevo) return;
-    else if(a==="pausa"){ if(!enPausa(nuevo)) nuevo.pausas.push({a:t}); }
-    else { nuevo.pausas.forEach(x=>{ if(!x.b) x.b=t; }); if(a==="salida") nuevo.fin=t; }
-    const {error:e}=await sb2.from("docs").upsert({tenant:TENANT,col:"fichajes",id:nuevo.id,data:nuevo,updated_at:new Date().toISOString()});
-    if(e) throw e; f=nuevo;
+    if(a==="entrada"&&f) return; if(a!=="entrada"&&!f) return;
+    // La hora la pone el servidor y siempre es el fichaje de la persona que ha iniciado sesión
+    const {data,error:e}=await sb2.rpc("fichar",{p_tenant:TENANT,p_accion:a});
+    if(e) throw e; f=data||f;
   }
   async function terminar(msg){
     try{ if(sb2) await sb2.auth.signOut({scope:"local"}); }catch(_){} sb2=null; quien=null; f=null; seguro=false; cierre=0; error=""; aviso=msg||""; pintar();
@@ -2297,7 +2297,8 @@ function VKds({dest}){
     const fi=e.target.closest("[data-fich]");
     if(fi){ const a=fi.dataset.fich;
       if(a==="salida" && !seguroSalida){ seguroSalida=true; return pintar(); }
-      seguroSalida=false; await Acc.fichar(yoF,a);
+      seguroSalida=false;
+      try{ await Acc.fichar(yoF,a); }catch(er){ toast(/solo puedes fichar lo tuyo|camarero asociado/i.test(er&&er.message||"")?"Cada persona ficha lo suyo: entra en «Fichar» (#fichar) con tu usuario.":"No se ha podido guardar el fichaje. Revisa la conexión e inténtalo otra vez."); return; }
       toast({entrada:`Entrada fichada a las ${hhmm(ahora())}. El cronómetro está en marcha.`,pausa:"En pausa: el cronómetro se ha parado.",volver:"De vuelta: el cronómetro sigue.",salida:"Salida fichada. ¡Buen descanso!"}[a]); return; }
     if(seguroSalida){ seguroSalida=false; pintar(); }
     if(e.target.closest("[data-sonido]")){ try{ localStorage.setItem("lp-sonido",sonidoOn()?"0":"1"); }catch(_){} if(sonidoOn()) pitido("cocina"); return pintar(); }
@@ -2874,7 +2875,7 @@ function VPanel(){
       const body={tenant:TENANT,email:correoLocal(u),password:claveSupa(pw),rol:v("#cu-rol"),cam:v("#cu-cam")};
       try{ const {data,error}=await Store.sb.functions.invoke("crear-usuario",{body}); if(error||!data||!data.ok) throw (data&&data.error)||error;
         toast(`Cuenta creada: entra con «${u}» y su contraseña.`); equipo=null; f.reset(); }
-      catch(err){ const m={ya_existe:"Ese usuario ya tiene cuenta: asígnale el rol desde el panel maestro.",contraseña_debil:"Contraseña demasiado débil.",sin_permiso:"Solo el dueño puede crear cuentas."}[err]; toast(m||"No se ha podido crear. ¿Está publicada la función crear-usuario en Supabase?"); }
+      catch(err){ const m={ya_existe:"Ese usuario ya tiene cuenta: asígnale el rol desde el panel maestro.",contraseña_debil:"Contraseña demasiado débil.",sin_permiso:"Solo el dueño puede crear cuentas.",restaurante_parado:"El restaurante está suspendido: no se pueden crear cuentas."}[err]; toast(m||"No se ha podido crear. ¿Está publicada la función crear-usuario en Supabase?"); }
       return pintar(true),true; }
     if(f.id==="f-pass"){ const a=v("#np1"), b=v("#np2"); if(a!==b) return toast("Las dos contraseñas no coinciden."),true; if(!(a.length>=10&&/[a-z]/i.test(a)&&/\d/.test(a))) return toast("Usa 10+ caracteres con letras y números."),true;
       const {error}=await Store.sb.auth.updateUser({password:a}); toast(error?"No se ha podido cambiar: "+error.message:"Contraseña cambiada."); f.reset(); return true; }
@@ -2992,7 +2993,7 @@ function VPanel(){
       const L=[["camarero","fecha","entrada","salida","pausas","minutos_en_pausa","minutos_trabajados"].join(";"),...fsAll.map(f=>[q(nomCam(f.cam)),new Date(f.ini).toLocaleDateString("es-ES"),hhmm(f.ini),f.fin?hhmm(f.fin):"sin salida",(f.pausas||[]).length,min(pausadoMs(f,f.fin||ahora())),min(trabajadoMs(f))].join(";"))];
       const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob(["\ufeff"+L.join("\n")],{type:"text/csv;charset=utf-8"})); a.download="registro-jornada-"+TENANT+"-"+new Date().toISOString().slice(0,10)+".csv"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); return; }
     const pr=t.closest("[data-perr]"); if(pr){ perRend=+pr.dataset.perr; return pintar(true); }
-    const fc=t.closest("[data-fich-cerrar]"); if(fc){ const f=Store.get("fichajes",fc.dataset.fichCerrar); if(f&&!f.fin){ const tt=ahora(); await Store.set("fichajes",f.id,{...f,pausas:(f.pausas||[]).map(x=>x.b?x:{...x,b:tt}),fin:tt}); toast("Fichaje cerrado."); } return pintar(true); }
+    const fc=t.closest("[data-fich-cerrar]"); if(fc){ const f=Store.get("fichajes",fc.dataset.fichCerrar); if(f&&!f.fin){ try{ await Acc.fichar(f.cam,"salida"); toast("Fichaje cerrado."); }catch(er){ toast("No se ha podido cerrar el fichaje. Inténtalo otra vez."); } } return pintar(true); }
     const inf=t.closest("[data-inf]"); if(inf){ periodoInf=+inf.dataset.inf; return pintar(true); }
     const pm=t.closest("[data-pm]"); if(pm){ hoja=+pm.dataset.pm; return pintar(true); }
     if(await clicParcial(t,"encargado")) return pintar(true);
