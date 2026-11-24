@@ -46,8 +46,18 @@
     $("f").hidden=true; $("sesion").hidden=false;
   }
 
+  // Freno de intentos (guardado en este navegador): tras 5 fallos seguidos, 1 minuto de espera;
+  // cada bloqueo siguiente, el doble (hasta 15 min). Un acierto lo pone a cero. El límite real lo pone Supabase.
+  const FRENO = "mx-freno-acceso";
+  const freno = () => { try{ return JSON.parse(localStorage.getItem(FRENO)||"null") || {f:0,h:0,b:0}; }catch(_){ return {f:0,h:0,b:0}; } };
+  const esperaMs = () => Math.max(0, (freno().h||0) - Date.now());
+  const textoEspera = () => { const m=Math.ceil(esperaMs()/60000); return "Demasiados intentos fallidos. Espera "+m+(m===1?" minuto":" minutos")+" y vuelve a probar."; };
+  const anotarFallo = () => { const s=freno(); s.f=(s.f||0)+1; if(s.f>=5){ s.b=Math.min(15,(s.b||0.5)*2); s.h=Date.now()+s.b*60000; s.f=0; } try{ localStorage.setItem(FRENO, JSON.stringify(s)); }catch(_){} };
+  const borrarFreno = () => { try{ localStorage.removeItem(FRENO); }catch(_){} };
+
   $("f").addEventListener("submit", async e => {
     e.preventDefault(); error("");
+    if(esperaMs()) return error(textoEspera());
     const usuario=$("usuario").value.trim(), codigo=$("codigo").value.trim().toLowerCase(), clave=$("clave").value;
     if(!usuario || !clave) return error("Escribe tu correo o usuario y tu contraseña.");
     const conCorreo = usuario.includes("@");
@@ -60,7 +70,11 @@
     let fallo=null;
     for(const p of intentos){ const { error:er } = await sb.auth.signInWithPassword({ email, password:p }); fallo=er; if(!er) break; }
     $("entrar").disabled=false; $("entrar").textContent="Entrar";
-    if(fallo) return error(/invalid/i.test(fallo.message) ? "Usuario o contraseña incorrectos." : "No se ha podido entrar: "+fallo.message);
+    if(fallo){
+      if(/invalid/i.test(fallo.message)) anotarFallo();
+      return error(esperaMs() ? textoEspera() : /invalid/i.test(fallo.message) ? "Usuario o contraseña incorrectos." : "No se ha podido entrar: "+fallo.message);
+    }
+    borrarFreno();
     mostrarSesion(true);
   });
 

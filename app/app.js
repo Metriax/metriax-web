@@ -773,6 +773,13 @@ function activarAudio(){ try{ audio=audio||new (window.AudioContext||window.webk
 ["pointerdown","keydown","touchstart"].forEach(ev=>addEventListener(ev,()=>{ if(sonidoOn()) activarAudio(); },{passive:true}));
 // Escape cierra la hoja abierta (cesta, cuenta, mesa…) o la comanda, igual que tocar fuera
 addEventListener("keydown",e=>{ if(e.key!=="Escape") return; const x=document.querySelector("#comanda-ui [data-x-cerrar]"); if(x){ x.click(); return; } const f=[...document.querySelectorAll(".hoja-fondo[data-cerrar]")].pop(); if(f) f.click(); });
+// Al abrirse una hoja (diálogo) el foco pasa a ella, para que el lector de pantalla y el teclado empiecen ahí;
+// al cerrarse vuelve a donde estaba (el botón que la abrió)
+(function focoHojas(){ let abierta=null, previo=null;
+  new MutationObserver(()=>{ const h=[...document.querySelectorAll('[role="dialog"][aria-modal="true"]')].pop()||null;
+    if(h && h!==abierta){ if(!abierta) previo=document.activeElement; abierta=h; if(!h.contains(document.activeElement)) try{ h.focus({preventScroll:true}); }catch(_){} }
+    else if(!h && abierta){ abierta=null; if(previo && document.contains(previo)) try{ previo.focus({preventScroll:true}); }catch(_){} previo=null; }
+  }).observe(document.body,{childList:true,subtree:true}); })();
 function pitido(tipo="aviso"){
   if(sonidoOn()){ try{ activarAudio(); const notas=tipo==="llamada"?[988,1319,988,1319,988,1319]:tipo==="urgente"?[880,660,880]:tipo==="cocina"?[523,784]:[660,880], vol=tipo==="llamada"?0.6:0.25;
     notas.forEach((f,i)=>{ const o=audio.createOscillator(), g=audio.createGain(); o.type="sine"; o.frequency.value=f; o.connect(g); g.connect(audio.destination);
@@ -1438,7 +1445,7 @@ function sugsHTML(carrito){
 function menuHojaHTML(sel){
   const m=cfgMenu();
   const g=(k,arr,t)=>`<h4>${t}</h4><div class="ops">${arr.map((x,i)=>`<button data-msel="${k}" data-i="${i}" aria-pressed="${sel[k]===i}">${esc(x)}</button>`).join("")}</div>`;
-  return `<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-modal="true" aria-label="${T("menuDia")}"><div class="asa"></div>
+  return `<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-modal="true" tabindex="-1" aria-label="${T("menuDia")}"><div class="asa"></div>
     <h3>${T("menuDia")} · ${eur(+m.precio)}</h3><div class="elige">${g("a",m.primeros,T("primeros"))}${g("b",m.segundos,T("segundos"))}${g("c",m.postres,T("postres"))}</div>
     <p style="margin:0;font-size:15px;color:var(--tinta-2)">${T("incluye")}: ${esc(m.incluye)}</p>
     <button class="btn rojo" data-add-menu ${sel.a!=null&&sel.b!=null&&sel.c!=null?"":"disabled"}>${T("anadirMenu")}</button>
@@ -1460,6 +1467,17 @@ function clicCarrito(t, st){
 /* =====================================================================
    VISTA: ACCESO DEL PERSONAL
    ===================================================================== */
+// Freno de intentos de entrada (guardado en este navegador, sobrevive a recargar): tras 5 fallos seguidos,
+// 1 minuto de espera; cada bloqueo siguiente, el doble (hasta 15 min). Un acierto lo pone a cero.
+// Es una ayuda en pantalla: el límite de verdad lo pone Supabase Auth en el servidor.
+const Freno = {
+  k:n=>"mx-freno-"+TENANT+"-"+n,
+  leer(n){ try{ return JSON.parse(localStorage.getItem(this.k(n))||"null")||{f:0,h:0,b:0}; }catch(_){ return {f:0,h:0,b:0}; } },
+  espera(n){ return Math.max(0,(this.leer(n).h||0)-ahora()); },
+  fallo(n){ const s=this.leer(n); s.f=(s.f||0)+1; if(s.f>=5){ s.b=Math.min(15,(s.b||0.5)*2); s.h=ahora()+s.b*60000; s.f=0; } try{ localStorage.setItem(this.k(n),JSON.stringify(s)); }catch(_){} },
+  ok(n){ try{ localStorage.removeItem(this.k(n)); }catch(_){} },
+  texto(n){ const m=Math.ceil(this.espera(n)/60000); return `Demasiados intentos fallidos. Espera ${m} ${m===1?"minuto":"minutos"} y vuelve a probar.`; }
+};
 function VLogin({destino}){
   let enviando=false, error="";
   const nombres={camarero:"Sala",kds:"Cocina y barra",recogida:"Pantalla de recogida",panel:"Panel del restaurante",admin:"Panel maestro"};
@@ -1481,10 +1499,13 @@ function VLogin({destino}){
   async function enviar(e){
     if(e.target.id!=="f-login") return; e.preventDefault();
     const email=app.querySelector("#lg-email").value.trim(), pass=app.querySelector("#lg-pass").value;
+    if(Freno.espera("login")){ error=Freno.texto("login"); pintar(); app.querySelector("#lg-email").value=email; return; }
     enviando=true; error=""; pintar(); app.querySelector("#lg-email").value=email;
     const {error:err}=await Store.sb.auth.signInWithPassword({email:correoLocal(email),password:claveSupa(pass)});
     enviando=false;
-    if(err){ error=/invalid/i.test(err.message)?"Usuario o contraseña incorrectos.":"No se ha podido entrar: "+err.message; pintar(); app.querySelector("#lg-email").value=email; return; }
+    if(err){ const mal=/invalid/i.test(err.message); if(mal) Freno.fallo("login");
+      error=Freno.espera("login")?Freno.texto("login"):mal?"Usuario o contraseña incorrectos.":"No se ha podido entrar: "+err.message; pintar(); app.querySelector("#lg-email").value=email; return; }
+    Freno.ok("login");
     toast("Sesión iniciada en este dispositivo."); setTimeout(reiniciarVista,300);
   }
   app.addEventListener("submit",enviar);
@@ -1705,7 +1726,7 @@ function VMesa({n,tk}){
       <div class="fila2"><button class="btn peq" data-a="llamar" ${llamado()?"disabled":""}>${ico("bell")}${llamado()?T("avisadoC"):T("llamar")}</button><button class="btn peq amar" data-a="hoja-cuenta" ${cuenta||!(m.consumo&&m.consumo.length)||pendienteMesa(m)<=0?"disabled":""}>${ico("receipt")}${T("pedirCuenta")}</button></div>
     </div>
     ${st.hoja==="cesta"?(()=>{ const L=lineasCesta(), pv=partesViva(), D=parteDiv(), imp=importeCesta(), online=puedePagar(), sel=selCesta(), grupos=[...new Set(L.map(l=>l.de))];
-      return `<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-modal="true" aria-label="${T("pedidoMesa")}"><div class="asa"></div>
+      return `<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-modal="true" tabindex="-1" aria-label="${T("pedidoMesa")}"><div class="asa"></div>
       <h3>${T("pedidoMesa")} · ${T("mesa").toLowerCase()} ${n}</h3><p class="cesta-viva"><i></i>${T("cestaViva")}</p>
       ${L.length?grupos.map(d=>`<p class="cesta-quien">${esc(nombreMovil(d))}</p>${L.filter(l=>l.de===d).map(l=>{ const it=item(l.k), mia=d===DISP&&!pv, kk=l.de+"|"+l.k;
         return `<div class="lin"><span class="q">${l.q}×</span><span>${esc(it.nL||it.n)}</span>${cmodo==="elegir"&&!pv?`<span class="cant"><button data-csel="${esc(kk)}" data-d="-1" aria-label="${esc(LG("Uno menos","One less","Menos um")+": "+(it.nL||it.n))}">−</button><span>${Math.min(csel[kk]||0,l.q)}</span><button data-csel="${esc(kk)}" data-d="1" aria-label="${esc(LG("Uno más","One more","Mais um")+": "+(it.nL||it.n))}">+</button></span>`
@@ -1729,7 +1750,7 @@ function VMesa({n,tk}){
       <button class="btn peq" data-cerrar-b>${T("seguir")}</button></div></div>`; })():""}
     ${st.hoja==="menu"?menuHojaHTML(st.msel):""}
     ${st.hoja==="cuenta"?(()=>{ const pend=pendienteMesa(m), cons=m.consumo||[], mio=selMio(m), Pt=parteAhora(), online=puedePagarCuenta()&&Pt.importe>=0.5;
-      return `<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-modal="true" aria-label="${T("laCuenta")}"><div class="asa"></div>
+      return `<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-modal="true" tabindex="-1" aria-label="${T("laCuenta")}"><div class="asa"></div>
       <h3>${T("laCuenta")} · ${T("mesa").toLowerCase()} ${n}</h3><p class="mini-ayuda" style="text-align:left;margin:0">${T("compartida")}</p>
       ${cons.map((x,i)=>{ const pq=pqDe(x), libre=x.q-pq; return `<div class="lin ${libre<=0?"pagada":""}"><span class="q">${x.q}×</span><span>${esc(item(x.id).nL||x.n)}${x.de===DISP?` <span class="tuyo">${T("tuyo")}</span>`:""}${libre<=0?` <span class="pg-chip">${T("pagado")}</span>`:pq>0?` <span class="pg-chip">${T("pagadoUds",pq,x.q)}</span>`:""}</span>${modoP==="elegir"&&libre>0?`<span class="cant"><button data-psel="${i}" data-d="-1" aria-label="${esc(LG("Uno menos","One less","Menos um")+": "+(item(x.id).nL||x.n))}">−</button><span>${Math.min(selP[i]||0,libre)}</span><button data-psel="${i}" data-d="1" aria-label="${esc(LG("Uno más","One more","Mais um")+": "+(item(x.id).nL||x.n))}">+</button></span>`:`<span>${eur(x.p*x.q)}</span>`}</div>`; }).join("")}
       <div class="total"><span>${T("total")}</span><span>${eur(totalMesa(m))}</span></div>
@@ -1745,12 +1766,12 @@ function VMesa({n,tk}){
       <p class="m-texto" style="font-size:15px;margin:4px 0 0">${online?T("oCamarero"):T("comoPagar")}</p>
       <div class="pago-op"><button data-forma="tarjeta" aria-pressed="${forma==="tarjeta"}">${ico("card")}${T("tarjeta")}</button><button data-forma="efectivo" aria-pressed="${forma==="efectivo"}">${ico("cash")}${T("efectivo")}</button></div>
       <button class="btn ${online?"":"rojo"}" data-a="cuenta" ${forma&&Pt.importe>0?"":"disabled"}>${modoP==="todo"?T("pedirCuentaA",esc(cam)):T("pedirParteA",esc(cam))}</button><button class="btn peq" data-cerrar-b>${T("ahoraNo")}</button></div></div>`; })():""}
-    ${st.hoja==="valorar"?`<div class="hoja-fondo"><div class="hoja" role="dialog" aria-modal="true" aria-label="${T("queTal")}"><div class="asa"></div>
+    ${st.hoja==="valorar"?`<div class="hoja-fondo"><div class="hoja" role="dialog" aria-modal="true" tabindex="-1" aria-label="${T("queTal")}"><div class="asa"></div>
       <h3>${T("queTal")}</h3><p class="m-texto">${T("queTalP")}</p>
       <div class="estrellas" role="group" aria-label="1–5">${[1,2,3,4,5].map(i=>`<button data-estrella="${i}" aria-pressed="${i<=estrellas}" aria-label="${i}">${STAR}</button>`).join("")}</div>
       <label style="font-size:15px">${T("comentario")}<input class="nota-in" id="coment" maxlength="200" value="${esc(coment)}"></label>
       <button class="btn rojo" data-a="valorar" ${estrellas?"":"disabled"}>${T("enviarOp")}</button><button class="btn peq" data-a="saltar">${T("saltar")}</button></div></div>`:""}
-    ${st.hoja==="google"?`<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-modal="true"><div class="asa"></div><div class="google-cta"><p class="m-hola" style="text-align:center">${T("gracias")}</p><p class="m-texto">${T("graciasG")}</p><a class="btn rojo" href="${esc(safeUrl(b.google))}">${ico("star")}${T("irGoogle")}</a></div><button class="btn peq" data-cerrar-b>${T("ahoraNo")}</button></div></div>`:""}
+    ${st.hoja==="google"?`<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-modal="true" tabindex="-1"><div class="asa"></div><div class="google-cta"><p class="m-hola" style="text-align:center">${T("gracias")}</p><p class="m-texto">${T("graciasG")}</p><a class="btn rojo" href="${esc(safeUrl(b.google))}">${ico("star")}${T("irGoogle")}</a></div><button class="btn peq" data-cerrar-b>${T("ahoraNo")}</button></div></div>`:""}
     </div>`;
     st.bump=0; if(y) window.scrollTo(0,y);
   }
@@ -1837,7 +1858,7 @@ function VLlevar(){
     app.innerHTML=`<div class="app-mesa">${cab}
       <div class="m-cuerpo"><p class="m-texto">${T("llP")}</p>${catsHTML(st.cat)}${listaCarta(st.cat,st.carrito)}<a class="btn peq" href="#carta" style="justify-self:start">${ico("back")}${T("verCarta")}</a></div>
       <div class="m-pie">${nCarr()?`<button class="btn rojo cesta ${st.bump?"bump":""}" data-a="cesta"><span><span class="n">${nCarr()}</span>${T("verPedido")}</span><span>${eur(tCarr())}</span></button>`:`<p class="m-texto" style="text-align:center;font-size:15px;margin:0">${T("pagaRecoger")}</p>`}</div>
-      ${st.hoja==="cesta"?`<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-modal="true" aria-label="${T("tuPedido")}"><div class="asa"></div><h3>${T("tuPedido")}</h3>${cestaLineas(st.carrito)}${sugsHTML(st.carrito)}
+      ${st.hoja==="cesta"?`<div class="hoja-fondo" data-cerrar><div class="hoja" role="dialog" aria-modal="true" tabindex="-1" aria-label="${T("tuPedido")}"><div class="asa"></div><h3>${T("tuPedido")}</h3>${cestaLineas(st.carrito)}${sugsHTML(st.carrito)}
         <div class="form-ll"><label>${T("nombre")}<input id="ll-nombre" autocomplete="given-name" value="${esc(datos.nombre)}" required></label>
         <label>${T("tel")}<input id="ll-tel" type="tel" autocomplete="tel" value="${esc(datos.tel)}"></label>
         <label>${T("hora")}<select id="ll-hora"><option value="${T("loAntes")}">${T("loAntes")}</option>${horasRecogida().map(h=>`<option ${datos.hora===h?"selected":""}>${h}</option>`).join("")}</select></label>
@@ -2015,7 +2036,7 @@ function pagosHTML(m){
 // Hoja de una mesa: pedidos por confirmar, lo consumido y cobrar (la mesa vuelve a estar libre)
 function hojaMesaHTML(n,quien){
   const m=mesa(n), ent=porConfirmar().filter(p=>p.mesa===n&&!p.llevar), cu=cuentaDe(n), rp=reservaProxima(n), tot=totalMesa(m);
-  return `<div class="hoja-fondo" data-cerrar><div class="hoja ui" role="dialog" aria-modal="true" aria-label="Mesa ${n}"><div class="asa"></div>
+  return `<div class="hoja-fondo" data-cerrar><div class="hoja ui" role="dialog" aria-modal="true" tabindex="-1" aria-label="Mesa ${n}"><div class="asa"></div>
     <div style="display:flex;justify-content:space-between;align-items:center"><h3 style="font-family:var(--display);font-size:26px;color:var(--rojo);margin:0">Mesa ${n}</h3><span class="pill">${zonaDe(n)} · ${esc(nomCamMesa(n))}</span></div>
     ${rp?`<p class="pill ok" style="justify-self:start">${ico("calendar")} Reserva ${esc(rp.hora)} · ${esc(rp.nombre)} (${rp.personas})</p>`:""}
     ${ent.map(p=>`<div class="entrante-c"><b>Pedido por confirmar · hace <span data-desde="${p.t}">${mmss(ahora()-p.t)}</span></b><span>${p.items.map(x=>`${x.q}× ${esc(x.n)}`).join(", ")}${p.nota?` · «${esc(p.nota)}»`:""}</span>${botonesValidar(p.id)}</div>`).join("")}
@@ -2117,7 +2138,7 @@ function VFichar(){
       <p class="m-texto" style="font-size:13px">La pantalla se cierra sola unos segundos después de fichar.</p></div></div>`;
   }
   async function enviar(e){
-    if(e.target.id!=="f-fichar") return; e.preventDefault(); if(ahora()<bloqueo||enviando) return;
+    if(e.target.id!=="f-fichar") return; e.preventDefault(); { const w=Freno.espera("fichar"); if(w){ bloqueo=ahora()+w; error=Freno.texto("fichar"); pintar(); } } if(ahora()<bloqueo||enviando) return;
     const pass=app.querySelector("#fc-p").value; error=""; aviso=""; enviando=true;
     try{
       if(supa){
@@ -2134,8 +2155,8 @@ function VFichar(){
         if(guardado && guardado!==await Pin.hash(pass)) throw new Error("PIN incorrecto.");
         quien=id; f=await leer();
       }
-      fallos=0; seguro=false; cierre=ahora()+60000;
-    }catch(er){ fallos++; if(fallos>=5){ bloqueo=ahora()+60000; fallos=0; er=new Error("Demasiados intentos. Espera un minuto."); }
+      fallos=0; Freno.ok("fichar"); seguro=false; cierre=ahora()+60000;
+    }catch(er){ Freno.fallo("fichar"); { const w=Freno.espera("fichar"); if(w){ bloqueo=ahora()+w; er=new Error(Freno.texto("fichar")); } }
       error=er.message||"No se ha podido entrar."; try{ if(sb2) await sb2.auth.signOut({scope:"local"}); }catch(_){} sb2=null; quien=null; }
     enviando=false; pintar();
   }
@@ -2199,11 +2220,11 @@ const Comanda = {
     const yo=this.por;
     if(!this.n){ const todas=Array.from({length:mesasN()},(_,i)=>mesa(i+1)), mias=todas.filter(m=>camDe(m.n)===yo), resto=todas.filter(m=>camDe(m.n)!==yo);
       const b=m=>`<button data-x-mesa="${m.n}" class="${m.abierta?"oc":""}"><b>${m.n}</b><small>${m.abierta?(camDe(m.n)&&camDe(m.n)!==yo?esc(nomCam(camDe(m.n))):"ocupada"):"libre"}</small></button>`;
-      this.el.innerHTML=`<div class="cx" role="dialog" aria-modal="true" aria-label="Tomar comanda"><div class="cx-cab"><div><small>Tomar comanda</small><h3>¿Qué mesa?</h3></div><button class="cx-x" data-x-cerrar aria-label="Cerrar">✕</button></div>
+      this.el.innerHTML=`<div class="cx" role="dialog" aria-modal="true" tabindex="-1" aria-label="Tomar comanda"><div class="cx-cab"><div><small>Tomar comanda</small><h3>¿Qué mesa?</h3></div><button class="cx-x" data-x-cerrar aria-label="Cerrar">✕</button></div>
         <div class="cx-scroll">${mias.length?`<p class="cx-tit">Tus mesas</p><div class="cx-mesas">${mias.map(b).join("")}</div>`:""}<p class="cx-tit">${mias.length?"Resto de la sala":"Sala"}</p><div class="cx-mesas">${resto.map(b).join("")}</div></div></div>`; return; }
     const g=this.grupos(), tabs=[["rapido","Rápido"],...(g.bebidas.length?[["bebidas","Bebidas"]]:[]),...(g.comida.length?[["comida","Comida"]]:[])];
     const scrollY=(this.el.querySelector(".cx-scroll")||{}).scrollTop||0, mismo=this._ult===this.tab+"|"+(this.sub[this.tab]||"")+"|"+this.q;
-    this.el.innerHTML=`<div class="cx" role="dialog" aria-modal="true" aria-label="Comanda de la mesa ${this.n}">
+    this.el.innerHTML=`<div class="cx" role="dialog" aria-modal="true" tabindex="-1" aria-label="Comanda de la mesa ${this.n}">
       <div class="cx-cab"><div><small>${esc(zonaDe(this.n))} · ${esc(nomCam(yo)||"Barra")}</small><h3>Mesa ${this.n} <button class="cx-link" data-x-cambiar>Cambiar</button></h3></div><button class="cx-x" data-x-cerrar aria-label="Cerrar">✕</button></div>
       <div class="cx-tabs" role="tablist">${tabs.map(([k,t])=>`<button role="tab" data-x-tab="${k}" aria-selected="${!this.q&&this.tab===k}">${t}</button>`).join("")}<label class="cx-bus"><span class="oculto">Buscar</span><input type="search" id="cx-bus" placeholder="Buscar…" value="${esc(this.q)}" autocomplete="off"></label></div>
       <div class="cx-scroll">${this.cuerpo()}</div>
@@ -2266,6 +2287,14 @@ function VKds({dest}){
   const impresos=()=>{ try{ return new Set(JSON.parse(localStorage.getItem(kImp+"-hechos")||"[]")); }catch(_){ return new Set(); } };
   const marcarImpreso=id=>{ try{ const s=[...impresos(),id].slice(-200); localStorage.setItem(kImp+"-hechos",JSON.stringify(s)); }catch(_){} };
   // Ticket de 80 mm: se imprime en la impresora predeterminada del dispositivo
+  // Impresión automática con varias pantallas: solo imprime la que «reclama» el ticket primero en la base de datos
+  // (marca «impreso» solo si nadie lo ha marcado y el ticket sigue «nuevo»; así no se pisa el trabajo de cocina)
+  async function reclamarImpresion(k){
+    if(Store.modo!=="supa") return true;
+    try{ const {data,error}=await Store.sb.from("docs").update({data:{...k,impreso:{disp:DISP,t:ahora()}}}).eq("tenant",TENANT).eq("col","tickets").eq("id",String(k.id))
+        .filter("data->>impreso","is",null).filter("data->>estado","eq","nuevo").select("id");
+      return !error && !!data && data.length>0; }catch(_){ return false; }
+  }
   function imprimir(k){
     const b=cfgBar(), h=new Date(k.t).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
     const html=`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:80mm auto;margin:3mm}body{font:13px/1.35 monospace;width:72mm;margin:0;color:#000}h1{font-size:16px;margin:0 0 2px;text-align:center}.c{text-align:center}.g{font-size:20px;font-weight:700;text-align:center;margin:6px 0}hr{border:0;border-top:1px dashed #000}li{list-style:none;font-size:15px;margin:3px 0}ul{padding:0;margin:4px 0}</style></head><body>
@@ -2319,7 +2348,7 @@ function VKds({dest}){
     alCambiar(){ const ids=new Set(tks().map(k=>k.id)); if(vistos && [...ids].some(i=>!vistos.has(i))) pitido("cocina");
       const ia=new Set(avisosB().map(a=>a.id)); if(vistosA && [...ia].some(i=>!vistosA.has(i))) pitido("llamada"); vistosA=ia;
       const ie=new Set((Store.personal()?entrantes():[]).map(p=>p.id)); if(vistosE && [...ie].some(i=>!vistosE.has(i))) pitido("urgente"); vistosE=ie;
-      if(vistos && imprimirOn()){ const ya=impresos(); tks().filter(k=>k.pagado&&!vistos.has(k.id)&&!ya.has(k.id)).forEach(imprimir); }
+      if(vistos && imprimirOn()){ const ya=impresos(); tks().filter(k=>k.pagado&&!vistos.has(k.id)&&!ya.has(k.id)).forEach(k=>{ marcarImpreso(k.id); reclamarImpresion(k).then(ok=>{ if(ok) imprimir(k); }); }); }
       vistos=ids; pintar(); },
     tic(){ const h=document.getElementById("hora"); if(h) h.textContent=hhmm(ahora()); app.querySelectorAll(".ticket").forEach(el=>{ const k=Store.get("tickets",el.dataset.tk); if(!k) return; const m=(ahora()-k.t)/60000; el.classList.toggle("am",m>=5&&m<10); el.classList.toggle("ro",m>=10); }); },
     salir(){ app.removeEventListener("click",clic); app.removeEventListener("change",cambioF); } };
@@ -2478,7 +2507,7 @@ function VPanel(){
   function filaReceta(r={}){ return `<div class="rec-fila"><select class="campo" data-rec-a aria-label="Ingrediente">${optArt(r.a)}</select><input class="campo precio-in" type="number" min="0" step="any" data-rec-q value="${r.q??""}" aria-label="Cantidad"><span class="ud">${r.a&&ART(r.a)?ART(r.a).ud:""}</span><button type="button" class="b-ui claro peq-ui" data-quitar-rec aria-label="Quitar ingrediente">×</button></div>`; }
   function hojaPlato(id){
     const p=cfgCarta().platos.find(x=>x.id===id); if(!p){ editPlato=null; return ""; }
-    return `<div class="hoja-fondo" data-cerrar><div class="hoja ui hoja-ancha" role="dialog" aria-modal="true" aria-label="Editar ${esc(p.n)}"><div class="asa"></div><h3 style="font-family:var(--display);color:var(--rojo);margin:0;font-size:24px">Editar plato</h3>
+    return `<div class="hoja-fondo" data-cerrar><div class="hoja ui hoja-ancha" role="dialog" aria-modal="true" tabindex="-1" aria-label="Editar ${esc(p.n)}"><div class="asa"></div><h3 style="font-family:var(--display);color:var(--rojo);margin:0;font-size:24px">Editar plato</h3>
       <form class="form-aj" id="f-edit-plato">
         <label>Nombre<input id="ep-n" value="${esc(p.n)}" maxlength="60" required></label>
         <label>Precio (€)<input id="ep-p" type="number" min="0" step="0.1" value="${+p.p||0}" required></label>
@@ -2802,7 +2831,7 @@ function VPanel(){
         ${(c.lineas||[]).map(l=>{ const a=ART(l.a); return a?`<tr><td>${esc(a.n)}</td><td style="text-align:right"><input class="campo precio-in" type="number" min="0" step="any" value="${l.q}" data-rq="${l.a}"> ${a.ud}</td><td style="text-align:right"><input class="campo precio-in" type="number" min="0" step="0.001" value="${l.coste}" data-rc="${l.a}"> €</td></tr>`:""; }).join("")}</tbody></table>
         <label class="check-l" style="display:flex;gap:8px;margin:10px 0"><input type="checkbox" id="rc-coste" checked> Actualizar el coste de los artículos con estos precios</label>
         <div class="acc-fila"><button class="b-ui verde" type="submit">${ico("check")}Recibido: subir stock</button><button type="button" class="b-ui claro" data-cerrar-b>Cancelar</button></div></form>`; }
-    return `<div class="hoja-fondo" data-cerrar><div class="hoja ui hoja-ancha hoja-neg" role="dialog" aria-modal="true"><div class="asa"></div>${cuerpo}</div></div>`;
+    return `<div class="hoja-fondo" data-cerrar><div class="hoja ui hoja-ancha hoja-neg" role="dialog" aria-modal="true" tabindex="-1"><div class="asa"></div>${cuerpo}</div></div>`;
   }
   async function cargarEjemploInv(){
     const pid=nid(), pid2=nid()+"b", pid3=nid()+"c";
@@ -2934,7 +2963,7 @@ function VPanel(){
   function hojaAdminHTML(){
     if(!pideAdmin) return "";
     const supa=Store.modo==="supa";
-    return `<div class="hoja-fondo" data-adm-fondo><div class="hoja hoja-adm" role="dialog" aria-modal="true" aria-label="Administración"><div class="asa"></div>
+    return `<div class="hoja-fondo" data-adm-fondo><div class="hoja hoja-adm" role="dialog" aria-modal="true" tabindex="-1" aria-label="Administración"><div class="asa"></div>
       <h3>${ico("lock")} Administración</h3>
       <p style="margin:0;font-size:15px;color:var(--tinta-2)">Caja, informes, inventario, compras, carta y ajustes. Solo para el encargado o el dueño.</p>
       <form id="f-admin" class="form-ll" autocomplete="off">
@@ -3057,8 +3086,10 @@ function VPanel(){
     if(f.id==="f-admin"){
       const destino=pideAdmin&&pideAdmin.tab;
       if(Store.modo==="supa"){
+        if(Freno.espera("admin")){ errAdmin=Freno.texto("admin"); return pintar(true); }
         const {error}=await Store.sb.auth.signInWithPassword({email:v("#adm-email").trim(),password:v("#adm-clave")});
-        if(error){ errAdmin="Correo o contraseña incorrectos."; return pintar(true); }
+        if(error){ if(/invalid/i.test(error.message)) Freno.fallo("admin"); errAdmin=Freno.espera("admin")?Freno.texto("admin"):"Correo o contraseña incorrectos."; return pintar(true); }
+        Freno.ok("admin");
         await leerRol(); if(!["dueno","super"].includes(Store.rol)){ errAdmin="Esa cuenta no es de dueño ni encargado de este restaurante."; await Store.sb.auth.signOut({scope:"local"}); return; }
         if(Store.recargar) await Store.recargar().catch(()=>{});
       } else {
