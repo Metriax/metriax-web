@@ -221,6 +221,19 @@ document.documentElement.lang=LANG;
    Cada restaurante es un "tenant": se elige con ?r=nombre en la dirección.
    ===================================================================== */
 const TENANT = (()=>{ try{ const r=new URLSearchParams(location.search).get("r"); if(r && /^[a-z0-9-]{2,40}$/.test(r)) return r; }catch(e){} return "tres-hermanos"; })();
+// Lo que escriben los clientes sin cuenta (pedidos, avisos, reservas, valoraciones, carritos) se limpia al leerlo:
+// el id es siempre el de la fila, los campos numéricos son números y ningún texto lleva < > " ` (no puede inyectar HTML en las pantallas del personal)
+const COLS_PUBLICAS = new Set(["pedidos","avisos","reservas","valoraciones","carritos"]);
+const CAMPOS_NUM = new Set(["t","mesa","personas","q","p","precio","total","importe","listoT","cambioT","desde"]);
+function limpiarDoc(col,id,d){
+  if(!COLS_PUBLICAS.has(col) || !d || typeof d!=="object") return d;
+  const sano=(v,k)=>{ if(typeof v==="string") return CAMPOS_NUM.has(k)&&v.trim()!==""&&!isNaN(+v) ? +v : v.replace(/[<>"`]/g,"");
+    if(typeof v==="number") return Number.isFinite(v)?v:0;
+    if(Array.isArray(v)) return v.slice(0,200).map(x=>sano(x,k));
+    if(v&&typeof v==="object"){ const o={}; for(const [kk,vv] of Object.entries(v)) o[kk.replace(/[^\w-]/g,"")]=sano(vv,kk); return o; }
+    return v; };
+  const o=sano(d,""); o.id=id; for(const k of CAMPOS_NUM) if(k in o && typeof o[k]!=="number" && o[k]!=null && typeof o[k]!=="boolean") o[k]=0;
+  return o; }
 const COLS = ["carritos","mesas","pedidos","tickets","avisos","cuentas","config","valoraciones","chat","nfc","reservas","articulos","movimientos","proveedores","compras","cierres","atenciones","fichajes"];
 const Store = {
   modo:"local", data:Object.fromEntries(COLS.map(c=>[c,new Map()])), oyentes:new Set(), colas:new Map(), sb:null, sesion:null, rol:null, cam:null, ver:0,
@@ -297,7 +310,7 @@ async function conectarSupabase(){
   sb.auth.onAuthStateChange((ev,ses)=>{ const antes=!!Store.sesion; Store.sesion=ses||null; if(antes!==!!ses){ setTimeout(async()=>{ await leerRol(); if(Store.recargar) await Store.recargar().catch(()=>{}); reiniciarVista(); },0); } });
   const cargar=async()=>{ const m=Object.fromEntries(COLS.map(c=>[c,new Map()])); let desde=0;
     while(true){ const {data,error}=await sb.from("docs").select("col,id,data").eq("tenant",TENANT).range(desde,desde+999); if(error) throw error;
-      data.forEach(r=>{ if(m[r.col]) m[r.col].set(r.id,r.data); }); if(data.length<1000) break; desde+=1000; }
+      data.forEach(r=>{ if(m[r.col]) m[r.col].set(r.id,limpiarDoc(r.col,r.id,r.data)); }); if(data.length<1000) break; desde+=1000; }
     // El cliente sin cuenta no puede leer pedidos: conserva los que ha traído su propia pantalla
     if(Store.publico()) Store.data.pedidos.forEach((v,k)=>m.pedidos.set(k,v));
     COLS.forEach(c=>Store.data[c]=m[c]); Store.cerrado = !(Store.sesion && Store.rol) && m.config.size===0; Store.emit();
@@ -308,7 +321,7 @@ async function conectarSupabase(){
   Store.modo="supa"; Store.emit();
   sb.channel("docs-"+TENANT).on("postgres_changes",{event:"*",schema:"public",table:"docs",filter:"tenant=eq."+TENANT},p=>{
     if(p.eventType==="DELETE"){ const o=p.old||{}; if(o.col && Store.data[o.col] && (!o.tenant||o.tenant===TENANT)){ Store.data[o.col].delete(o.id); Store.emit(); } return; }
-    const r=p.new; if(r && r.tenant===TENANT && Store.data[r.col]){ Store.data[r.col].set(r.id,r.data); Store.emit(); }
+    const r=p.new; if(r && r.tenant===TENANT && Store.data[r.col]){ Store.data[r.col].set(r.id,limpiarDoc(r.col,r.id,r.data)); Store.emit(); }
   }).subscribe(st=>{ if(st==="CHANNEL_ERROR"||st==="TIMED_OUT") toast("Conexión en vivo interrumpida. Reintentando…"); if(st==="SUBSCRIBED" && Store._resync){ cargar().catch(()=>{}); } Store._resync=true; });
   document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") cargar().catch(()=>{}); });
   reiniciarVista();
