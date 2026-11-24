@@ -819,6 +819,8 @@ body.cx-abierta{overflow:hidden}
 /* Pantalla de carga neutra (antes de tener los datos del restaurante) */
 .arranque{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:#f5f5f7}
 .arranque i{width:34px;height:34px;border-radius:50%;border:3px solid rgba(0,0,0,.1);border-top-color:rgba(0,0,0,.55);animation:arrGira .8s linear infinite}
+.arranque.sin-red{text-align:center;font:16px/1.4 system-ui,sans-serif;color:#333}
+.arranque.sin-red p{margin:0 0 14px}
 @keyframes arrGira{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.arranque i{animation-duration:2.4s}}
 </style>
@@ -839,6 +841,6 @@ body.cx-abierta{overflow:hidden}
   <div class="v-pie"><span>Gíralo con el dedo. En el móvil, «Ponerlo en mi mesa» abre la cámara.</span><span>Modelo de muestra: el definitivo saldrá del escaneo del plato real.</span></div>
 </dialog>
 
-<script src="app.js?v=14"></script>
+<script src="app.js?v=15"></script>
 </body>
 </html>

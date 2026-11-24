@@ -225,15 +225,28 @@ const TENANT = (()=>{ try{ const r=new URLSearchParams(location.search).get("r")
 // el id es siempre el de la fila, los campos numéricos son números y ningún texto lleva < > " ` (no puede inyectar HTML en las pantallas del personal)
 const COLS_PUBLICAS = new Set(["pedidos","avisos","reservas","valoraciones","carritos"]);
 const CAMPOS_NUM = new Set(["t","mesa","personas","q","p","precio","total","importe","listoT","cambioT","desde"]);
+const ID_OK = /^[\w.:~-]{1,80}$/, CLAVES_MALAS = new Set(["__proto__","constructor","prototype"]);
+// Devuelve null si el documento no es válido (se ignora): id raro o pedido sin una lista de platos utilizable
 function limpiarDoc(col,id,d){
-  if(!COLS_PUBLICAS.has(col) || !d || typeof d!=="object") return d;
-  const sano=(v,k)=>{ if(typeof v==="string") return CAMPOS_NUM.has(k)&&v.trim()!==""&&!isNaN(+v) ? +v : v.replace(/[<>"`]/g,"");
+  if(!COLS_PUBLICAS.has(col)) return d;
+  if(!d || typeof d!=="object" || Array.isArray(d) || !ID_OK.test(String(id))) return null;
+  const num=v=>{ const n=typeof v==="number"?v:(typeof v==="string"&&v.trim()!==""?+v:NaN); return Number.isFinite(n)?n:0; };
+  const sano=(v,k,prof)=>{ if(prof>6) return null;
+    if(typeof v==="string") return CAMPOS_NUM.has(k)?num(v):v.slice(0,2000).replace(/[<>"'`]/g,"");
     if(typeof v==="number") return Number.isFinite(v)?v:0;
-    if(Array.isArray(v)) return v.slice(0,200).map(x=>sano(x,k));
-    if(v&&typeof v==="object"){ const o={}; for(const [kk,vv] of Object.entries(v)) o[kk.replace(/[^\w-]/g,"")]=sano(vv,kk); return o; }
-    return v; };
-  const o=sano(d,""); o.id=id; for(const k of CAMPOS_NUM) if(k in o && typeof o[k]!=="number" && o[k]!=null && typeof o[k]!=="boolean") o[k]=0;
+    if(typeof v==="boolean"||v==null) return v;
+    if(Array.isArray(v)) return v.slice(0,200).map(x=>sano(x,k,prof+1));
+    if(typeof v==="object"){ const o={}; for(const [kk,vv] of Object.entries(v)){ const c=kk.replace(/[^\w~.:-]/g,"").slice(0,80); if(!c||CLAVES_MALAS.has(c)) continue; o[c]=sano(vv,c,prof+1); } return o; }
+    return null; };
+  const o=sano(d,"",0); o.id=String(id);
+  for(const k of CAMPOS_NUM) if(k in o && o[k]!=null && typeof o[k]!=="boolean" && typeof o[k]!=="number") o[k]=num(o[k]);
+  if(col==="pedidos"){ if(!Array.isArray(o.items)) o.items=[];
+    o.items=o.items.filter(x=>x&&typeof x==="object"&&!Array.isArray(x)).map(x=>({...x,id:typeof x.id==="string"?x.id:String(x.id??""),n:typeof x.n==="string"?x.n:"",q:num(x.q)}));
+    if(!o.items.length) return null; }
+  if(col==="avisos" && typeof o.tipo!=="string") return null;
   return o; }
+// Igual, para lo que llega de las funciones públicas (mesa, reserva, pedido para llevar)
+const limpio=(col,d)=>d&&typeof d==="object"&&!Array.isArray(d)?limpiarDoc(col,d.id,d):null;
 const COLS = ["carritos","mesas","pedidos","tickets","avisos","cuentas","config","valoraciones","chat","nfc","reservas","articulos","movimientos","proveedores","compras","cierres","atenciones","fichajes"];
 const Store = {
   modo:"local", data:Object.fromEntries(COLS.map(c=>[c,new Map()])), oyentes:new Set(), colas:new Map(), sb:null, sesion:null, rol:null, cam:null, ver:0,
@@ -310,18 +323,23 @@ async function conectarSupabase(){
   sb.auth.onAuthStateChange((ev,ses)=>{ const antes=!!Store.sesion; Store.sesion=ses||null; if(antes!==!!ses){ setTimeout(async()=>{ await leerRol(); if(Store.recargar) await Store.recargar().catch(()=>{}); reiniciarVista(); },0); } });
   const cargar=async()=>{ const m=Object.fromEntries(COLS.map(c=>[c,new Map()])); let desde=0;
     while(true){ const {data,error}=await sb.from("docs").select("col,id,data").eq("tenant",TENANT).range(desde,desde+999); if(error) throw error;
-      data.forEach(r=>{ if(m[r.col]) m[r.col].set(r.id,limpiarDoc(r.col,r.id,r.data)); }); if(data.length<1000) break; desde+=1000; }
+      data.forEach(r=>{ if(m[r.col]){ const d=limpiarDoc(r.col,r.id,r.data); if(d) m[r.col].set(r.id,d); } }); if(data.length<1000) break; desde+=1000; }
     // El cliente sin cuenta no puede leer pedidos: conserva los que ha traído su propia pantalla
     if(Store.publico()) Store.data.pedidos.forEach((v,k)=>m.pedidos.set(k,v));
     COLS.forEach(c=>Store.data[c]=m[c]); Store.cerrado = !(Store.sesion && Store.rol) && m.config.size===0; Store.emit();
     // Primera vez que entra un administrador: guarda la carta de la plantilla en la base de datos (así sala puede marcar agotados)
     if(Store.sesion && ["dueno","super"].includes(Store.rol) && !m.config.has("carta")) setTimeout(()=>{ if(Store.modo==="supa") Acc.carta({}).catch?.(()=>{}); },0); };
   Store.recargar=cargar;
-  try{ await cargar(); }catch(e){ console.warn("supabase",e); toast("No se ha podido conectar con la base de datos. Funcionando en modo local."); Store.sb=null; return false; }
+  try{ await cargar(); }catch(e){ console.warn("supabase",e); Store.sb=null; Store.sinRed=true;
+    // Sin conexión NO se pasa a modo local: un pedido guardado solo en el móvil nunca llegaría al restaurante
+    if(vista && vista.salir) vista.salir(); vista=null;
+    app.innerHTML=`<div class="arranque sin-red" role="alert"><div><p>${LANG==="en"?"No connection. Retrying…":LANG==="pt"?"Sem ligação. A tentar de novo…":"Sin conexión. Reintentando…"}</p><button class="btn">${LANG==="en"?"Retry":LANG==="pt"?"Tentar de novo":"Reintentar"}</button></div></div>`;
+    app.querySelector(".sin-red button").addEventListener("click",()=>location.reload());
+    setTimeout(()=>location.reload(),8000); return false; }
   Store.modo="supa"; Store.emit();
   sb.channel("docs-"+TENANT).on("postgres_changes",{event:"*",schema:"public",table:"docs",filter:"tenant=eq."+TENANT},p=>{
     if(p.eventType==="DELETE"){ const o=p.old||{}; if(o.col && Store.data[o.col] && (!o.tenant||o.tenant===TENANT)){ Store.data[o.col].delete(o.id); Store.emit(); } return; }
-    const r=p.new; if(r && r.tenant===TENANT && Store.data[r.col]){ Store.data[r.col].set(r.id,limpiarDoc(r.col,r.id,r.data)); Store.emit(); }
+    const r=p.new; if(r && r.tenant===TENANT && Store.data[r.col]){ { const d=limpiarDoc(r.col,r.id,r.data); if(!d) return; Store.data[r.col].set(r.id,d); } Store.emit(); }
   }).subscribe(st=>{ if(st==="CHANNEL_ERROR"||st==="TIMED_OUT") toast("Conexión en vivo interrumpida. Reintentando…"); if(st==="SUBSCRIBED" && Store._resync){ cargar().catch(()=>{}); } Store._resync=true; });
   document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") cargar().catch(()=>{}); });
   reiniciarVista();
@@ -333,7 +351,7 @@ async function conectarSupabase(){
   const ver=async()=>{ try{ const r=await fetch(location.pathname+"?v="+Date.now(),{method:"HEAD",cache:"no-store"}); const e=r.headers.get("etag")||r.headers.get("last-modified"); if(!e) return;
     if(et&&e!==et) pend=true; et=et||e; if(pend){ const ae=document.activeElement; if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return; location.reload(); } }catch(_){} };
   ver(); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") ver(); }); addEventListener("hashchange",ver); addEventListener("pageshow",e=>{ if(e.persisted) ver(); }); setInterval(ver,300000); })();
-async function conectarDB(){ try{ await conectarSupabase(); }catch(e){ console.warn("conexión",e); } if(!vista) reiniciarVista(); }
+async function conectarDB(){ try{ await conectarSupabase(); }catch(e){ console.warn("conexión",e); } if(!vista && !Store.sinRed) reiniciarVista(); }
 // Lo que el cliente sin cuenta pide a la base de datos (solo su mesa o su pedido para llevar)
 const Remoto = {
   async pago(body){ const {data,error}=await Store.sb.functions.invoke("pago",{body:{tenant:TENANT,...body}});
@@ -341,22 +359,22 @@ const Remoto = {
   async mesa(n,tk){
     const {data,error}=await Store.sb.rpc("mesa_cliente",{p_tenant:TENANT,p_mesa:String(n),p_tk:tk||""}); if(error) throw error;
     if(data && data.ok){ const foto=()=>JSON.stringify([Store.get("mesas",n),Store.get("carritos",n),...(data.pedidos||[]).map(p=>Store.get("pedidos",p.id))]), antes=foto();
-      if(data.mesa) Store.data.mesas.set(String(n),data.mesa); if(data.carrito) Store.data.carritos.set(String(n),data.carrito); (data.pedidos||[]).forEach(p=>Store.data.pedidos.set(p.id,p));
+      if(data.mesa) Store.data.mesas.set(String(n),data.mesa); if(data.carrito){ const c=limpiarDoc("carritos",String(n),data.carrito); if(c) Store.data.carritos.set(String(n),c); } (Array.isArray(data.pedidos)?data.pedidos:[]).forEach(p=>{ const q=limpio("pedidos",p); if(q) Store.data.pedidos.set(q.id,q); });
       if(foto()!==antes) Store.emit(); }
     return data;
   },
   // Cesta compartida de la mesa: guardar lo de este móvil / quitar lo ya enviado
   async cesta(n,tk,mapa,ronda){ const {data,error}=await Store.sb.rpc("carrito_set",{p_tenant:TENANT,p_mesa:String(n),p_tk:tk||"",p_disp:DISP,p_mapa:mapa,p_ronda:ronda}); if(error) throw error;
-    if(data&&data.por){ const {error:_e,...c}=data; Store.data.carritos.set(String(n),c); Store.emit(); } return data; },
+    if(data&&data.por){ const {error:_e,...c}=data; const l=limpiarDoc("carritos",String(n),c); if(l){ Store.data.carritos.set(String(n),l); Store.emit(); } } return data; },
   async cestaQuitar(n,tk,quitar){ const {data,error}=await Store.sb.rpc("carrito_quitar",{p_tenant:TENANT,p_mesa:String(n),p_tk:tk||"",p_quitar:quitar}); if(error) throw error;
-    if(data&&data.por){ Store.data.carritos.set(String(n),data); Store.emit(); } return data; },
+    if(data&&data.por){ const l=limpiarDoc("carritos",String(n),data); if(l){ Store.data.carritos.set(String(n),l); Store.emit(); } } return data; },
   async reserva(id){
-    const {data,error}=await Store.sb.rpc("reserva_publica",{p_tenant:TENANT,p_id:id}); if(error) throw error;
+    const {data:d0,error}=await Store.sb.rpc("reserva_publica",{p_tenant:TENANT,p_id:id}); if(error) throw error; const data=d0?limpiarDoc("reservas",id,d0):d0;
     if(data && JSON.stringify(data)!==JSON.stringify(Store.get("reservas",id))){ Store.data.reservas.set(id,data); Store.emit(); }
     return data;
   },
   async llevar(id){
-    const {data,error}=await Store.sb.rpc("pedido_llevar",{p_tenant:TENANT,p_id:id}); if(error) throw error;
+    const {data:d0,error}=await Store.sb.rpc("pedido_llevar",{p_tenant:TENANT,p_id:id}); if(error) throw error; const data=d0?limpiarDoc("pedidos",id,d0):d0;
     if(data && JSON.stringify(data)!==JSON.stringify(Store.get("pedidos",id))){ Store.data.pedidos.set(id,data); Store.emit(); }
     return data;
   }
@@ -1463,7 +1481,7 @@ function VLogin({destino}){
   app.addEventListener("submit",enviar);
   return { titulo:"Acceso del personal · "+cfgBar().nombre, pintar, alCambiar(){}, salir(){ app.removeEventListener("submit",enviar); } };
 }
-async function cerrarSesion(){ if(Store.sb){ await Store.sb.auth.signOut(); toast("Sesión cerrada en este dispositivo."); } }
+async function cerrarSesion(){ if(Store.sb){ await Store.sb.auth.signOut({scope:"local"}); toast("Sesión cerrada en este dispositivo."); } }
 document.addEventListener("click",e=>{ if(e.target.closest("[data-salir]")) cerrarSesion(); });
 function VSinAcceso({destino}){
   const nombres={camarero:"la pantalla de camareros",kds:"cocina y barra",recogida:"la pantalla de recogida",panel:"el panel del restaurante",admin:"el panel maestro"};
@@ -1754,7 +1772,7 @@ function VMesa({n,tk}){
       case "pagar-cuenta": { const Pt=parteAhora(); if(!(Pt.importe>=0.5)){ toast(T("minimo")); return; }
         pagandoP=true; pintar();
         const r=await Remoto.pago({accion:"cuenta",mesa:n,tk,modo:modoP==="todo"?"todo":modoP==="partes"?"partes":"lineas",lin:Pt.lin,n:Pt.n||0,importe:Pt.importe,desde:m.desde,lang:LANG,path:location.pathname,disp:DISP}).catch(()=>null);
-        if(r&&r.url){ location.href=r.url; return; }
+        if(r&&r.url){ if(/^https:\/\/checkout\.stripe\.com\//.test(r.url)) location.href=r.url; else toast(T("errPago")||"No se ha podido abrir el pago."); return; }
         pagandoP=false; toast(r&&(r.error==="cambio"||r.error==="cerrada")?T("cuentaCambio"):T("pagoNoDisp")); if(Store.publico()) comprobar(); break; }
       case "ronda": { const ult=[...misPedidos()].reverse().find(p=>estadoPedido(p)>=0&&p.items.some(x=>x.dest==="barra")); if(!ult){ toast(T("tNoBebida")); return; } st.carrito={}; ult.items.filter(x=>x.dest==="barra"&&!agotado(x.id)).forEach(x=>st.carrito[x.id]=x.q); subirCesta(); st.hoja="cesta"; cmodo="todo"; csel={}; break; }
       case "pagar": { nota=(app.querySelector("#nota")?.value||"").trim(); const div=cmodo==="partes"||!!partesViva(), sel=selCesta(), imp=importeCesta();
@@ -1764,7 +1782,7 @@ function VMesa({n,tk}){
         { const mapa={}; Object.entries(st.carrito).forEach(([k,q])=>{ if(q>0) mapa[k]=q; }); clearTimeout(tSub); ultSubido=JSON.stringify(mapa)+"|"+Math.max(0,rondaVista); await CestaMesa.set(n,tk,mapa,Math.max(0,rondaVista)).catch(()=>null); }
         const r=div?await Remoto.pago({accion:"partes",mesa:n,tk,n:cpers,importe:imp,lang:LANG,path:location.pathname,disp:DISP}).catch(()=>null)
           :await Remoto.pago({accion:"crear",mesa:n,tk,items:sel.map(l=>({id:l.k,q:l.q,de:l.de})),cesta:1,nota,lang:LANG,path:location.pathname,disp:DISP}).catch(()=>null);
-        if(r&&r.url){ location.href=r.url; return; }
+        if(r&&r.url){ if(/^https:\/\/checkout\.stripe\.com\//.test(r.url)) location.href=r.url; else toast(T("errPago")||"No se ha podido abrir el pago."); return; }
         enviando=false; if(Store.publico()) comprobar();
         toast(r&&r.error==="agotado"?T("agotTemp")+(r.n?`: ${r.n}`:""):r&&r.error==="cambio"?T("cuentaCambio"):T("pagoNoDisp")); break; }
       case "enviar": nota=(app.querySelector("#nota")?.value||"").trim();
@@ -2061,7 +2079,7 @@ function VFichar(){
     if(e) throw e; f=nuevo;
   }
   async function terminar(msg){
-    try{ if(sb2) await sb2.auth.signOut(); }catch(_){} sb2=null; quien=null; f=null; seguro=false; cierre=0; error=""; aviso=msg||""; pintar();
+    try{ if(sb2) await sb2.auth.signOut({scope:"local"}); }catch(_){} sb2=null; quien=null; f=null; seguro=false; cierre=0; error=""; aviso=msg||""; pintar();
   }
   function pintar(){
     if(!quien){
@@ -2112,7 +2130,7 @@ function VFichar(){
       }
       fallos=0; seguro=false; cierre=ahora()+60000;
     }catch(er){ fallos++; if(fallos>=5){ bloqueo=ahora()+60000; fallos=0; er=new Error("Demasiados intentos. Espera un minuto."); }
-      error=er.message||"No se ha podido entrar."; try{ if(sb2) await sb2.auth.signOut(); }catch(_){} sb2=null; quien=null; }
+      error=er.message||"No se ha podido entrar."; try{ if(sb2) await sb2.auth.signOut({scope:"local"}); }catch(_){} sb2=null; quien=null; }
     enviando=false; pintar();
   }
   async function clic(e){
@@ -2129,7 +2147,7 @@ function VFichar(){
   app.addEventListener("submit",enviar); app.addEventListener("click",clic);
   return { titulo:"Fichar · "+cfgBar().nombre, pintar, alCambiar(){},
     tic(){ if(quien&&cierre&&ahora()>cierre) terminar(f&&f.fin?"Salida fichada. Hasta pronto.":"Sesión cerrada. Para seguir, vuelve a entrar."); else if(!quien&&bloqueo&&ahora()>bloqueo){ bloqueo=0; pintar(); } },
-    salir(){ app.removeEventListener("submit",enviar); app.removeEventListener("click",clic); try{ if(sb2) sb2.auth.signOut(); }catch(_){} } };
+    salir(){ app.removeEventListener("submit",enviar); app.removeEventListener("click",clic); try{ if(sb2) sb2.auth.signOut({scope:"local"}); }catch(_){} } };
 }
 // Tomar nota: comanda manual del personal (camarero o barra). Va directa a cocina y barra, ya aceptada, a nombre de quien la toma.
 const Comanda = {
@@ -2959,7 +2977,7 @@ function VPanel(){
     if(t.closest("[data-admin-abrir]")){ pideAdmin={tab:null}; errAdmin=""; return pintar(true); }
     if(t.closest("[data-adm-cancelar]")||t.matches("[data-adm-fondo]")){ pideAdmin=null; errAdmin=""; return pintar(true); }
     if(t.closest("[data-admin-cerrar]")){
-      if(Store.modo==="supa"){ await Store.sb.auth.signOut(); toast("Administración cerrada. Vuelve a entrar con el usuario del local."); return; }
+      if(Store.modo==="supa"){ await Store.sb.auth.signOut({scope:"local"}); toast("Administración cerrada. Vuelve a entrar con el usuario del local."); return; }
       Acceso.cerrarAdmin(); panelTab="sala"; toast("Administración cerrada."); return pintar(true); }
     if(t.closest("[data-salir-local]")){ Acceso.salir(); toast("Sesión del local cerrada en este dispositivo."); return reiniciarVista(); }
     { const tb=t.closest("[data-tab]"); if(tb && !SERVICIO_TABS.includes(tb.dataset.tab) && !Acceso.admin()){ pideAdmin={tab:tb.dataset.tab}; errAdmin=""; return pintar(true); } }
@@ -2970,7 +2988,7 @@ function VPanel(){
     const qr=t.closest("[data-quitar-rec]"); if(qr){ qr.closest(".rec-fila").remove(); return; }
     const tb=t.closest("[data-tab]"); if(tb){ panelTab=tb.dataset.tab; hoja=null; editPlato=null; hojaNeg=null; if(panelTab==="equipo") equipo=null; pintar(true); return window.scrollTo(0,0); }
     const rm=t.closest("[data-rm]"); if(rm){ modoRes=rm.dataset.rm; return pintar(true); }
-    if(t.closest("[data-csv]")){ const q=v=>`"${String(v).replace(/"/g,'""')}"`, fsAll=Store.all("fichajes").sort((a,b)=>a.ini-b.ini), min=ms=>Math.round(ms/60000);
+    if(t.closest("[data-csv]")){ const q=v=>`"${String(v).replace(/^([=+\-@\t\r])/,"'$1").replace(/"/g,'""')}"`, fsAll=Store.all("fichajes").sort((a,b)=>a.ini-b.ini), min=ms=>Math.round(ms/60000);
       const L=[["camarero","fecha","entrada","salida","pausas","minutos_en_pausa","minutos_trabajados"].join(";"),...fsAll.map(f=>[q(nomCam(f.cam)),new Date(f.ini).toLocaleDateString("es-ES"),hhmm(f.ini),f.fin?hhmm(f.fin):"sin salida",(f.pausas||[]).length,min(pausadoMs(f,f.fin||ahora())),min(trabajadoMs(f))].join(";"))];
       const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob(["\ufeff"+L.join("\n")],{type:"text/csv;charset=utf-8"})); a.download="registro-jornada-"+TENANT+"-"+new Date().toISOString().slice(0,10)+".csv"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); return; }
     const pr=t.closest("[data-perr]"); if(pr){ perRend=+pr.dataset.perr; return pintar(true); }
@@ -3034,7 +3052,7 @@ function VPanel(){
       if(Store.modo==="supa"){
         const {error}=await Store.sb.auth.signInWithPassword({email:v("#adm-email").trim(),password:v("#adm-clave")});
         if(error){ errAdmin="Correo o contraseña incorrectos."; return pintar(true); }
-        await leerRol(); if(!["dueno","super"].includes(Store.rol)){ errAdmin="Esa cuenta no es de dueño ni encargado de este restaurante."; await Store.sb.auth.signOut(); return; }
+        await leerRol(); if(!["dueno","super"].includes(Store.rol)){ errAdmin="Esa cuenta no es de dueño ni encargado de este restaurante."; await Store.sb.auth.signOut({scope:"local"}); return; }
         if(Store.recargar) await Store.recargar().catch(()=>{});
       } else {
         if(!(await Acceso.comprobarAdmin(v("#adm-clave")))){ errAdmin="Clave incorrecta."; pintar(true); const i=app.querySelector("#adm-clave"); if(i){ i.value=""; i.focus(); } return; }
@@ -3213,7 +3231,7 @@ function VAdmin(){
     if(Store.modo==="supa"){ const {error}=await Store.sb.from("solicitudes").update({...cambios,actualizado:new Date().toISOString()}).eq("id",id); if(error) throw error; }
     sols=sols.map(x=>x.id===id?{...x,...cambios}:x);
   }
-  function csvSols(){ const q=v=>`"${String(v??"").replace(/"/g,'""')}"`; const L=solsFiltradas();
+  function csvSols(){ const q=v=>`"${String(v??"").replace(/^([=+\-@\t\r])/,"'$1").replace(/"/g,'""')}"`; const L=solsFiltradas();
     const filas=[["fecha","local","nombre","telefono","correo","ciudad","mesas","estado","mensaje","notas"].join(";"),...L.map(x=>[new Date(x.creado).toLocaleString("es-ES"),x.local,x.nombre,x.telefono,x.email,x.ciudad,x.mesas,EST_SOL[x.estado]?.[1]||x.estado,x.mensaje,x.notas].map(q).join(";"))];
     const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob(["\ufeff"+filas.join("\n")],{type:"text/csv;charset=utf-8"})); a.download="avisos-metriiax.csv"; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
   const enlace=(slug,h)=>location.href.split("#")[0].split("?")[0]+"?r="+slug+h;
