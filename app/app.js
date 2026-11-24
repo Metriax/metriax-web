@@ -320,7 +320,7 @@ async function conectarSupabase(){
   const ver=async()=>{ try{ const r=await fetch(location.pathname+"?v="+Date.now(),{method:"HEAD",cache:"no-store"}); const e=r.headers.get("etag")||r.headers.get("last-modified"); if(!e) return;
     if(et&&e!==et) pend=true; et=et||e; if(pend){ const ae=document.activeElement; if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return; location.reload(); } }catch(_){} };
   ver(); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") ver(); }); addEventListener("hashchange",ver); addEventListener("pageshow",e=>{ if(e.persisted) ver(); }); setInterval(ver,300000); })();
-async function conectarDB(){ await conectarSupabase(); if(Store.modo==="supa") reiniciarVista(); }
+async function conectarDB(){ try{ await conectarSupabase(); }catch(e){ console.warn("conexión",e); } if(!vista) reiniciarVista(); }
 // Lo que el cliente sin cuenta pide a la base de datos (solo su mesa o su pedido para llevar)
 const Remoto = {
   async pago(body){ const {data,error}=await Store.sb.functions.invoke("pago",{body:{tenant:TENANT,...body}});
@@ -3340,6 +3340,8 @@ function VAdmin(){
 /* ===================================================================== */
 aplicarMarca();
 // Modo demo: el restaurante arranca con sus enlaces NFC y aparece en el panel maestro
-if(SUPA_URL.startsWith("__")){ Acc.enlacesDemo(); registrarLocal(); }
-ir();
+if(SUPA_URL.startsWith("__")){ Acc.enlacesDemo(); registrarLocal(); ir(); }
+// Con base de datos: pantalla de carga neutra hasta tener los datos reales del restaurante.
+// Así no asoman, ni medio segundo, los datos de ejemplo (de otro local) mientras conecta.
+else app.innerHTML=`<div class="arranque" role="status" aria-label="Cargando"><i></i></div>`;
 conectarDB();
