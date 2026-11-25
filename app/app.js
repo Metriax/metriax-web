@@ -1317,7 +1317,8 @@ const Acceso = {
 };
 // Con base de datos: el usuario corto del local se convierte en su correo, y la clave corta en una válida para Supabase
 const correoLocal = u => u.includes("@") ? u : `${u.trim().toLowerCase()}.${TENANT}@metriax.app`;
-const claveSupa = p => p.length>=10 ? p : `metriax-${TENANT}-${p}`;
+// Las contraseñas se usan tal cual (antes, a las de menos de 10 se les añadía un prefijo que estaba a la vista en el código).
+const claveSupa = p => p;
 function VLocal(){
   let error="", fallos=0, bloqueo=0;
   function pintar(){
@@ -3059,7 +3060,7 @@ function VPanel(){
     if(equipo===null && !cargandoEquipo) cargarEquipo();
     return `<div class="p-cab"><div><h1>Equipo y accesos</h1><p>Cada persona con su cuenta, su contraseña y su rol. Un camarero solo puede actuar como él mismo.</p></div></div>
       <div class="rej"><div class="card c7"><h2>Personas con acceso</h2>${equipo===null?`<p class="ayuda">Cargando…</p>`:equipo.length?`<table class="datos" style="min-width:0"><thead><tr><th>Correo</th><th>Rol</th><th>Es</th><th></th></tr></thead><tbody>${equipo.map(x=>`<tr><td>${esc(x.email)}</td><td>${ROLES[x.rol]||esc(x.rol)}</td><td>${x.cam?esc(nomCam(x.cam)):"—"}</td><td><button class="b-ui claro peq-ui" data-quitar-miembro="${esc(x.email)}">Quitar</button></td></tr>`).join("")}</tbody></table>`:`<p class="ayuda">Nadie todavía.</p>`}</div>
-      <form class="card c5" id="f-crear-usuario"><h2>Crear cuenta</h2><p class="ayuda">Usuario corto (por ejemplo <b>ana</b>) y contraseña de 8 o más caracteres con letras y números. Con eso entra a fichar y en su pantalla de Sala o Cocina. Elige abajo qué camarero es. También vale un correo.</p><div class="form-aj" style="grid-template-columns:1fr">
+      <form class="card c5" id="f-crear-usuario"><h2>Crear cuenta</h2><p class="ayuda">Usuario corto (por ejemplo <b>ana</b>) y contraseña de 10 o más caracteres con letras y números. Con eso entra a fichar y en su pantalla de Sala o Cocina. Elige abajo qué camarero es. También vale un correo.</p><div class="form-aj" style="grid-template-columns:1fr">
         <label>Usuario o correo<input id="cu-email" type="text" required autocomplete="off" autocapitalize="none" placeholder="ana"></label>
         <label>Contraseña inicial<span class="acc-fila"><input id="cu-pass" type="text" minlength="8" required autocomplete="off" style="flex:1"><button type="button" class="b-ui claro peq-ui" data-gen-pass>Generar</button></span></label>
         <label>Rol<select id="cu-rol"><option value="sala">Sala (camarero)</option><option value="cocina">Cocina y barra</option><option value="dueno">Dueño (todo)</option></select></label>
@@ -3185,7 +3186,7 @@ function VPanel(){
       await Store.set("config","seguridad",{...c,camareros:cams_}); if(c.dueno && !Pin.sesion()) Pin.entrar("dueno"); toast(n?`${n} PIN guardado${n>1?"s":""}.`:"Nada que cambiar."); return pintar(true),true; }
     if(f.id==="f-crear-usuario"){ const u=v("#cu-email").trim(), pw=v("#cu-pass");
       if(!u.includes("@") && !/^[a-z0-9._-]{2,30}$/i.test(u)) return toast("El usuario: de 2 a 30 letras o números, sin espacios."),true;
-      if(!(pw.length>=8&&/[a-z]/i.test(pw)&&/\d/.test(pw))) return toast("La contraseña: 8 o más caracteres, con letras y números."),true;
+      if(!(pw.length>=10&&pw.length<=72&&/[a-z]/i.test(pw)&&/\d/.test(pw))) return toast("La contraseña: 10 o más caracteres, con letras y números."),true;
       if(pw.length>=10 && !(/[a-z]/i.test(pw)&&/\d/.test(pw))) return toast("Si es larga, que tenga letras y números."),true;
       const body={tenant:TENANT,email:correoLocal(u),password:claveSupa(pw),rol:v("#cu-rol"),cam:v("#cu-cam")};
       try{ const {data,error}=await Store.sb.functions.invoke("crear-usuario",{body}); if(error||!data||!data.ok) throw (data&&data.error)||error;

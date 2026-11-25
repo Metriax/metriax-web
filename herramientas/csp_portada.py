@@ -15,11 +15,11 @@ for m in re.finditer(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", html, re.S):
 SUPA = "https://nchhioxmgrdngrzkxzza.supabase.co"
 csp = "; ".join([
     "default-src 'self'",
-    "script-src 'self' " + " ".join(huellas) + " https://cdn.jsdelivr.net",
+    "script-src 'self' " + " ".join(huellas),
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
     "img-src 'self' data: blob:",
-    f"connect-src 'self' {SUPA} https://cdn.jsdelivr.net",
+    f"connect-src 'self' {SUPA}",
     "worker-src 'self' blob:",
     "media-src 'self' blob: data:",
     "object-src 'none'", "base-uri 'self'", "form-action 'self'",

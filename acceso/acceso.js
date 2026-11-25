@@ -64,8 +64,8 @@
     if(!conCorreo && !/^[a-z0-9-]{2,40}$/.test(codigo)) return error("Si entras con usuario, escribe también el código del restaurante.");
     // Las cuentas del personal creadas desde el panel usan este formato (igual que la app)
     const email = conCorreo ? usuario : usuario.toLowerCase()+"."+codigo+"@metriax.app";
-    // Las claves cortas del personal se guardan con un prefijo (Supabase pide más longitud): se prueba primero esa forma
-    const intentos = clave.length<10 && codigo ? ["metriax-"+codigo+"-"+clave, clave] : [clave];
+    // La contraseña se envía tal cual (ya no hay prefijo para claves cortas)
+    const intentos = [clave];
     $("entrar").disabled=true; $("entrar").textContent="Entrando…";
     let fallo=null;
     for(const p of intentos){ const { error:er } = await sb.auth.signInWithPassword({ email, password:p }); fallo=er; if(!er) break; }
