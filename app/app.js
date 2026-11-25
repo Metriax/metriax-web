@@ -537,10 +537,13 @@ const Acc = {
     const pagos={}, suma=(k,v)=>{ if(v>0) pagos[k]=r2((pagos[k]||0)+v); };
     suma("online",(m.consumo||[]).filter(x=>x.pg).reduce((a,x)=>a+x.p*x.q,0)); (m.pagos||[]).forEach(p=>suma(p.metodo||"online",+p.importe||0));
     const dom=Object.entries(pagos).sort((a,b)=>b[1]-a[1])[0], f=pend>0?(forma||cuentaDe(n)||"sin indicar"):(dom?dom[0]:"online"); suma(f,pend);
-    if(m.consumo && m.consumo.length) await Store.set("cuentas",nid(),{mesa:n,total,forma:f,pagos,t:ahora(),por,items:m.consumo,desde:m.desde});
+    const cid=m.consumo && m.consumo.length ? nid() : null;
+    if(cid) await Store.set("cuentas",cid,{mesa:n,total,forma:f,pagos,t:ahora(),por,items:m.consumo,desde:m.desde});
     for(const a of Store.all("avisos").filter(a=>a.mesa===n && !a.atendido && !a.llevar)) await Store.set("avisos",a.id,{...a,atendido:{por,t:ahora(),auto:true}});
     for(const p of Store.all("pedidos").filter(p=>p.mesa===n && !p.llevar && !p.servido && !p.rechazado)) await Store.set("pedidos",p.id,p.aceptado?{...p,servido:true}:{...p,rechazado:{por,t:ahora(),auto:true}});
-    return Store.set("mesas",n,{n,abierta:false,consumo:[],cuenta:null,desde:null,cerradaT:ahora()});
+    const r=await Store.set("mesas",n,{n,abierta:false,consumo:[],cuenta:null,desde:null,cerradaT:ahora()});
+    if(cid) Fac.alCobrar(cid);   // ticket VERI*FACTU (si la facturación está activada)
+    return r;
   },
   lineas(carrito,sugs){ return Object.entries(carrito).filter(([,q])=>q>0).map(([k,q])=>{ const it=item(k); return {id:k,n:it.n,q,p:it.p,dest:it.dest,sug:sugs&&sugs.has(k)?1:0}; }); },
   // El cliente crea el pedido como "entrante": no llega a cocina ni a barra hasta que el personal lo acepta
@@ -672,7 +675,7 @@ const Acc = {
     const a=Store.get("avisos",aid); if(!a) return;
     await Store.set("avisos",aid,{...a,atendido:{por,t:ahora()}});
     const p=Store.get("pedidos",a.pedido); if(!p) return;
-    if(p.llevar){ await Store.set("pedidos",p.id,{...p,recogido:true,recogidoT:ahora()}); await Store.set("cuentas",nid(),{mesa:0,llevar:true,codigo:p.codigo,total:p.items.reduce((s,x)=>s+x.p*x.q,0),forma:"en barra",t:ahora(),por,items:p.items}); }
+    if(p.llevar){ await Store.set("pedidos",p.id,{...p,recogido:true,recogidoT:ahora()}); const cid=nid(); await Store.set("cuentas",cid,{mesa:0,llevar:true,codigo:p.codigo,total:p.items.reduce((s,x)=>s+x.p*x.q,0),forma:"en barra",t:ahora(),por,items:p.items}); Fac.alCobrar(cid); }
     else await Store.set("pedidos",p.id,{...p,servido:true,servidoT:ahora()});
   },
   async ticket(tid, estado){
@@ -794,6 +797,8 @@ function toast(t){ const box=document.getElementById("toasts"); box.querySelecto
 const I = {
   bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
   receipt:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+  print:'<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
+  shield:'<path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
   card:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h4"/>',
   cash:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v.01M18 15v.01"/>',
   chef:'<path d="M7 14a4 4 0 1 1 2-7.5A4 4 0 0 1 15 6a4 4 0 1 1 2 8v5H7z"/><path d="M7 17h10"/>',
@@ -1017,6 +1022,278 @@ function vigilar(){
 const ACCESO_DEF = {usuario:'taberna', clave:'1234', admin:'1969'};
 const AUDIT = {estado:"",filas:null};
 const SERVICIO_TABS = ["sala","pedidos","reservas","agotados","temporal","turno"];
+/* =====================================================================
+   FACTURACIÓN Y VERI*FACTU (RD 1007/2023 y Orden HAC/1177/2024)
+   Con base de datos, el SERVIDOR numera, calcula la huella SHA-256, encadena
+   y guarda (funciones fac_* de Supabase); la función «verifactu» lo envía a la AEAT.
+   En la demo (sin base de datos) se imita aquí con el mismo algoritmo, sin enviar nada.
+   ===================================================================== */
+/*! QR Code Generator for JavaScript · Copyright (c) 2009 Kazuhiko Arase · Licencia MIT · «QR Code» es marca registrada de DENSO WAVE INCORPORATED */
+const QRGEN=function(){var t=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],f={},c=function(t,r){o=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(i=4*e+17),l(0,0),l(i-7,0),l(0,i-7),s(),h(),d(t,r),e>=7&&v(t),null==a&&(a=p(e,n,u)),w(a,r)},l=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||i<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||i<=r+n||(o[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},h=function(){for(var t=8;t<i-8;t+=1)null==o[t][6]&&(o[t][6]=t%2==0);for(var r=8;r<i-8;r+=1)null==o[6][r]&&(o[6][r]=r%2==0)},s=function(){for(var t=B.getPatternPosition(e),r=0;r<t.length;r+=1)for(var n=0;n<t.length;n+=1){var i=t[r],a=t[n];if(null==o[i][a])for(var u=-2;u<=2;u+=1)for(var f=-2;f<=2;f+=1)o[i+u][a+f]=-2==u||2==u||-2==f||2==f||0==u&&0==f}},v=function(t){for(var r=B.getBCHTypeNumber(e),n=0;n<18;n+=1){var a=!t&&1==(r>>n&1);o[Math.floor(n/3)][n%3+i-8-3]=a}for(n=0;n<18;n+=1){a=!t&&1==(r>>n&1);o[n%3+i-8-3][Math.floor(n/3)]=a}},d=function(t,r){for(var e=n<<3|r,a=B.getBCHTypeInfo(e),u=0;u<15;u+=1){var f=!t&&1==(a>>u&1);u<6?o[u][8]=f:u<8?o[u+1][8]=f:o[i-15+u][8]=f}for(u=0;u<15;u+=1){f=!t&&1==(a>>u&1);u<8?o[8][i-u-1]=f:u<9?o[8][15-u-1+1]=f:o[8][15-u-1]=f}o[i-8][8]=!t},w=function(t,r){for(var e=-1,n=i-1,a=7,u=0,f=B.getMaskFunction(r),c=i-1;c>0;c-=2)for(6==c&&(c-=1);;){for(var g=0;g<2;g+=1)if(null==o[n][c-g]){var l=!1;u<t.length&&(l=1==(t[u]>>>a&1)),f(n,c-g)&&(l=!l),o[n][c-g]=l,-1==(a-=1)&&(u+=1,a=7)}if((n+=e)<0||i<=n){n-=e,e=-e;break}}},p=function(t,r,e){for(var n=A.getRSBlocks(t,r),o=b(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=k(i[u],l.getLength()-1).mod(l);for(a[u]=new Array(l.getLength()-1),g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=s>=0?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};f.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=M(t);break;case"Alphanumeric":e=x(t);break;case"Byte":e=m(t);break;case"Kanji":e=L(t);break;default:throw"mode:"+r}u.push(e),a=null},f.isDark=function(t,r){if(t<0||i<=t||r<0||i<=r)throw t+","+r;return o[t][r]},f.getModuleCount=function(){return i},f.make=function(){if(e<1){for(var t=1;t<40;t++){for(var r=A.getRSBlocks(t,n),o=b(),i=0;i<u.length;i++){var a=u[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var g=0;for(i=0;i<r.length;i++)g+=r[i].dataCount;if(o.getLengthInBits()<=8*g)break}e=t}c(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){c(!0,e);var n=B.getLostPoint(f);(0==e||t>n)&&(t=n,r=e)}return r}())},f.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<f.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<f.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=f.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},f.createSvgTag=function(t,r,e,n){var o={};"object"==typeof arguments[0]&&(t=(o=arguments[0]).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,c,g=f.getModuleCount()*t+2*r,l="";for(c="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",l+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',l+=o.scalable?"":' width="'+g+'px" height="'+g+'px"',l+=' viewBox="0 0 '+g+" "+g+'" ',l+=' preserveAspectRatio="xMinYMin meet"',l+=n.text||e.text?' role="img" aria-labelledby="'+y([n.id,e.id].join(" ").trim())+'"':"",l+=">",l+=n.text?'<title id="'+y(n.id)+'">'+y(n.text)+"</title>":"",l+=e.text?'<description id="'+y(e.id)+'">'+y(e.text)+"</description>":"",l+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',l+='<path d="',a=0;a<f.getModuleCount();a+=1)for(u=a*t+r,i=0;i<f.getModuleCount();i+=1)f.isDark(a,i)&&(l+="M"+(i*t+r)+","+u+c);return l+='" stroke="transparent" fill="black"/>',l+="</svg>"},f.createDataURL=function(t,r){t=t||2,r=void 0===r?4*t:r;var e=f.getModuleCount()*t+2*r,n=r,o=e-r;return I(e,e,function(r,e){if(n<=r&&r<o&&n<=e&&e<o){var i=Math.floor((r-n)/t),a=Math.floor((e-n)/t);return f.isDark(a,i)?0:1}return 1})},f.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=f.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=f.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=y(e),o+='"'),o+="/>"};var y=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return f.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*f.getModuleCount()+2*t,u=t,c=a-t,g={"██":"█","█ ":"▀"," █":"▄","  ":" "},l={"██":"▀","█ ":"▀"," █":" ","  ":" "},h="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<c&&u<=r&&r<c&&f.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<c&&u<=r+1&&r+1<c&&f.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",h+=t<1&&r+1>=c?l[i]:g[i];h+="\n"}return a%2&&t>0?h.substring(0,h.length-a-1)+Array(a+1).join("▀"):h.substring(0,h.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=f.getModuleCount()*t+2*r,u=r,c=a-r,g=Array(t+1).join("██"),l=Array(t+1).join("  "),h="",s="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),s="",n=0;n<a;n+=1)i=1,u<=n&&n<c&&u<=e&&e<c&&f.isDark(o,Math.floor((n-u)/t))&&(i=0),s+=i?g:l;for(o=0;o<t;o+=1)h+=s+"\n"}return h.substring(0,h.length-1)},f.renderTo2dContext=function(t,r){r=r||2;for(var e=f.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=f.isDark(n,o)?"black":"white",t.fillRect(o*r,n*r,r,r)},f};t.stringToBytes=(t.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,t.createStringToBytes=function(t,r){var e=function(){for(var e=S(t),n=function(){var t=e.read();if(-1==t)throw"eof";return t},o=0,i={};;){var a=e.read();if(-1==a)break;var u=n(),f=n()<<8|n();i[String.fromCharCode(a<<8|u)]=f,o+=1}if(o!=r)throw o+" != "+r;return i}(),n="?".charCodeAt(0);return function(t){for(var r=[],o=0;o<t.length;o+=1){var i=t.charCodeAt(o);if(i<128)r.push(i);else{var a=e[t.charAt(o)];"number"==typeof a?(255&a)==a?r.push(a):(r.push(a>>>8),r.push(255&a)):r.push(n)}}return r}};var r,e,n,o,i,a=1,u=2,f=4,c=8,g={L:1,M:0,Q:3,H:2},l=0,h=1,s=2,v=3,d=4,w=5,p=6,y=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],e=1335,n=7973,i=function(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r},(o={}).getBCHTypeInfo=function(t){for(var r=t<<10;i(r)-i(e)>=0;)r^=e<<i(r)-i(e);return 21522^(t<<10|r)},o.getBCHTypeNumber=function(t){for(var r=t<<12;i(r)-i(n)>=0;)r^=n<<i(r)-i(n);return t<<12|r},o.getPatternPosition=function(t){return r[t-1]},o.getMaskFunction=function(t){switch(t){case l:return function(t,r){return(t+r)%2==0};case h:return function(t,r){return t%2==0};case s:return function(t,r){return r%3==0};case v:return function(t,r){return(t+r)%3==0};case d:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case w:return function(t,r){return t*r%2+t*r%3==0};case p:return function(t,r){return(t*r%2+t*r%3)%2==0};case y:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},o.getErrorCorrectPolynomial=function(t){for(var r=k([1],0),e=0;e<t;e+=1)r=r.multiply(k([1,C.gexp(e)],0));return r},o.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case f:case c:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case f:return 16;case c:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case f:return 16;case c:return 12;default:throw"mode:"+t}}},o.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);i>5&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},o),C=function(){for(var t=new Array(256),r=new Array(256),e=0;e<8;e+=1)t[e]=1<<e;for(e=8;e<256;e+=1)t[e]=t[e-4]^t[e-5]^t[e-6]^t[e-8];for(e=0;e<255;e+=1)r[t[e]]=e;var n={glog:function(t){if(t<1)throw"glog("+t+")";return r[t]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return t[r]}};return n}();function k(t,r){if(void 0===t.length)throw t.length+"/"+r;var e=function(){for(var e=0;e<t.length&&0==t[e];)e+=1;for(var n=new Array(t.length-e+r),o=0;o<t.length-e;o+=1)n[o]=t[o+e];return n}(),n={getAt:function(t){return e[t]},getLength:function(){return e.length},multiply:function(t){for(var r=new Array(n.getLength()+t.getLength()-1),e=0;e<n.getLength();e+=1)for(var o=0;o<t.getLength();o+=1)r[e+o]^=C.gexp(C.glog(n.getAt(e))+C.glog(t.getAt(o)));return k(r,0)},mod:function(t){if(n.getLength()-t.getLength()<0)return n;for(var r=C.glog(n.getAt(0))-C.glog(t.getAt(0)),e=new Array(n.getLength()),o=0;o<n.getLength();o+=1)e[o]=n.getAt(o);for(o=0;o<t.getLength();o+=1)e[o]^=C.gexp(C.glog(t.getAt(o))+r);return k(e,0).mod(t)}};return n}var A=function(){var t=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],r=function(t,r){var e={};return e.totalCount=t,e.dataCount=r,e},e={};return e.getRSBlocks=function(e,n){var o=function(r,e){switch(e){case g.L:return t[4*(r-1)+0];case g.M:return t[4*(r-1)+1];case g.Q:return t[4*(r-1)+2];case g.H:return t[4*(r-1)+3];default:return}}(e,n);if(void 0===o)throw"bad rs block @ typeNumber:"+e+"/errorCorrectionLevel:"+n;for(var i=o.length/3,a=[],u=0;u<i;u+=1)for(var f=o[3*u+0],c=o[3*u+1],l=o[3*u+2],h=0;h<f;h+=1)a.push(r(c,l));return a},e}(),b=function(){var t=[],r=0,e={getBuffer:function(){return t},getAt:function(r){var e=Math.floor(r/8);return 1==(t[e]>>>7-r%8&1)},put:function(t,r){for(var n=0;n<r;n+=1)e.putBit(1==(t>>>r-n-1&1))},getLengthInBits:function(){return r},putBit:function(e){var n=Math.floor(r/8);t.length<=n&&t.push(0),e&&(t[n]|=128>>>r%8),r+=1}};return e},M=function(t){var r=a,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+2<r.length;)t.put(o(r.substring(n,n+3)),10),n+=3;n<r.length&&(r.length-n==1?t.put(o(r.substring(n,n+1)),4):r.length-n==2&&t.put(o(r.substring(n,n+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return n},x=function(t){var r=u,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+1<r.length;)t.put(45*o(r.charAt(n))+o(r.charAt(n+1)),11),n+=2;n<r.length&&t.put(o(r.charAt(n)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return n},m=function(r){var e=f,n=t.stringToBytes(r),o={getMode:function(){return e},getLength:function(t){return n.length},write:function(t){for(var r=0;r<n.length;r+=1)t.put(n[r],8)}};return o},L=function(r){var e=c,n=t.stringToBytesFuncs.SJIS;if(!n)throw"sjis not supported.";!function(){var t=n("友");if(2!=t.length||38726!=(t[0]<<8|t[1]))throw"sjis not supported."}();var o=n(r),i={getMode:function(){return e},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return i},D=function(){var t=[],r={writeByte:function(r){t.push(255&r)},writeShort:function(t){r.writeByte(t),r.writeByte(t>>>8)},writeBytes:function(t,e,n){e=e||0,n=n||t.length;for(var o=0;o<n;o+=1)r.writeByte(t[o+e])},writeString:function(t){for(var e=0;e<t.length;e+=1)r.writeByte(t.charCodeAt(e))},toByteArray:function(){return t},toString:function(){var r="";r+="[";for(var e=0;e<t.length;e+=1)e>0&&(r+=","),r+=t[e];return r+="]"}};return r},S=function(t){var r=t,e=0,n=0,o=0,i={read:function(){for(;o<8;){if(e>=r.length){if(0==o)return-1;throw"unexpected end of file./"+o}var t=r.charAt(e);if(e+=1,"="==t)return o=0,-1;t.match(/^\s$/)||(n=n<<6|a(t.charCodeAt(0)),o+=6)}var i=n>>>o-8&255;return o-=8,i}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return i},I=function(t,r,e){for(var n=function(t,r){var e=t,n=r,o=new Array(t*r),i={setPixel:function(t,r,n){o[r*e+t]=n},write:function(t){t.writeString("GIF87a"),t.writeShort(e),t.writeShort(n),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(e),t.writeShort(n),t.writeByte(0);var r=a(2);t.writeByte(2);for(var o=0;r.length-o>255;)t.writeByte(255),t.writeBytes(r,o,255),o+=255;t.writeByte(r.length-o),t.writeBytes(r,o,r.length-o),t.writeByte(0),t.writeString(";")}},a=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,i=u(),a=0;a<r;a+=1)i.add(String.fromCharCode(a));i.add(String.fromCharCode(r)),i.add(String.fromCharCode(e));var f,c,g,l=D(),h=(f=l,c=0,g=0,{write:function(t,r){if(t>>>r!=0)throw"length over";for(;c+r>=8;)f.writeByte(255&(t<<c|g)),r-=8-c,t>>>=8-c,g=0,c=0;g|=t<<c,c+=r},flush:function(){c>0&&f.writeByte(g)}});h.write(r,n);var s=0,v=String.fromCharCode(o[s]);for(s+=1;s<o.length;){var d=String.fromCharCode(o[s]);s+=1,i.contains(v+d)?v+=d:(h.write(i.indexOf(v),n),i.size()<4095&&(i.size()==1<<n&&(n+=1),i.add(v+d)),v=d)}return h.write(i.indexOf(v),n),h.write(e,n),h.flush(),l.toByteArray()},u=function(){var t={},r=0,e={add:function(n){if(e.contains(n))throw"dup key:"+n;t[n]=r,r+=1},size:function(){return r},indexOf:function(r){return t[r]},contains:function(r){return void 0!==t[r]}};return e};return i}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=D();n.write(a);for(var u=function(){var t=0,r=0,e=0,n="",o={},i=function(t){n+=String.fromCharCode(a(63&t))},a=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return o.writeByte=function(n){for(t=t<<8|255&n,r+=8,e+=1;r>=6;)i(t>>>r-6),r-=6},o.flush=function(){if(r>0&&(i(t<<6-r),t=0,r=0),e%3!=0)for(var o=3-e%3,a=0;a<o;a+=1)n+="="},o.toString=function(){return n},o}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return t}();return t.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||n>=57344?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)},t}();
+// Facturación con base de datos: se activa (true) cuando la migración 2026-11-24_facturacion_verifactu esté aplicada en Supabase.
+// Mientras tanto, con base de datos la pestaña dice «próximamente» y no se hace ninguna llamada; en la demo funciona entera.
+const FAC_SERVIDOR = false;
+const FAC_URL_QR = {pruebas:"https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR", produccion:"https://www2.agenciatributaria.gob.es/wlpl/TIKE-CONT/ValidarQR"};
+const FAC_TIPOS = {F2:["Factura simplificada","Ticket"], F1:["Factura","Completa"], F3:["Factura (canje de tickets)","Canje"], R1:["Factura rectificativa","Rectificativa"], R5:["Factura rectificativa (simplificada)","Rectificativa"]};
+const FAC_AEAT = {pendiente:["aviso","Pendiente de envío"], correcto:["ok","Aceptada por la AEAT"], aceptado_errores:["aviso","Aceptada con avisos"], incorrecto:["critico","Rechazada por la AEAT"]};
+const FAC_IVAS = [10,21,5,4];
+// Mensajes para cada error del servidor (el orden importa: de lo más concreto a lo más general)
+const FAC_ERR = [
+  ["sin_datos_fiscales","Primero completa los datos fiscales del restaurante (Facturación › Datos fiscales)."],
+  ["simplificada_max","Una factura simplificada no puede pasar de 3.000 €. Emite una factura completa con los datos del cliente."],
+  ["dest_nif","El NIF del cliente no es válido. Revisa la letra o el dígito de control."],
+  ["dest_nombre","Falta el nombre o la razón social del cliente."],
+  ["dest_domicilio","Falta el domicilio del cliente."],
+  ["f3_ya_canjeado","Ese ticket ya se canjeó por una factura completa."],
+  ["f3_ticket_rectificado","Ese ticket tiene una rectificación: no se puede canjear."],
+  ["f3_ticket_no_valido","Alguno de los tickets no se puede canjear."],
+  ["rectifica_la_completa","Ese ticket se canjeó por una factura completa: rectifica la factura completa."],
+  ["rectifica_mas_que_original","No se puede devolver más de lo que se facturó."],
+  ["no_rectificable","Esta factura no se puede rectificar."],
+  ["tiene_dependientes","Tiene rectificativas o un canje asociados: no se puede anular."],
+  ["ya_anulada","Esa factura ya estaba anulada."],
+  ["nif_con_facturas","El NIF no se puede cambiar con facturas ya emitidas. Escríbenos por Soporte."],
+  ["produccion_solo_super","El paso a producción lo activa metriiax cuando el certificado esté listo."],
+  ["produccion_sin_vuelta","Ya está en producción: no se puede volver al entorno de pruebas."],
+  ["cuenta_no_existe","No se encuentra esa cuenta."],
+  ["total_cero","El total tiene que ser mayor que 0."],
+  ["sin_lineas","Añade al menos una línea."],
+  ["linea_nombre","Cada línea necesita un concepto."],
+  ["linea_cantidad","Revisa las cantidades (entre 0,001 y 9.999)."],
+  ["linea_precio","Revisa los precios."],
+  ["linea_iva","Ese tipo de IVA no es válido."],
+  ["motivo","Escribe el motivo (al menos 3 letras)."],
+  ["nif","El NIF del restaurante no es válido."],
+  ["sin permiso","Tu cuenta no tiene permiso para esto."]];
+const facError = e => { const m=String((e&&(e.message||e.details))||e||""); if((e&&e.code==="23505")||/duplicate|unique/i.test(m)) return "Esa cuenta ya tiene su factura.";
+  const k=FAC_ERR.find(([c])=>m.includes(c)); return k?k[1]:"No se ha podido completar. Revisa la conexión e inténtalo otra vez."; };
+const fac2 = x => (Math.round((+x+(+x>=0?1:-1)*Number.EPSILON)*100)/100).toFixed(2);
+const facFecha = iso => { const [a,m,d]=String(iso).slice(0,10).split("-"); return `${d}-${m}-${a}`; };
+const facFechaL = iso => { const [a,m,d]=String(iso).slice(0,10).split("-"); return `${d}/${m}/${a}`; };
+const facIVA = v => (+v).toLocaleString("es-ES",{maximumFractionDigits:2})+" %";
+// NIF, NIE o CIF español: formato y control (igual que fac_nif_ok en el servidor)
+function facNifOk(x){
+  const s=String(x||"").toUpperCase().replace(/[^0-9A-Z]/g,"");
+  if(/^[0-9]{8}[A-Z]$/.test(s)||/^[XYZ][0-9]{7}[A-Z]$/.test(s)){ const n=+("XYZ".indexOf(s[0])>=0?"XYZ".indexOf(s[0])+s.slice(1,8):s.slice(0,8)); return "TRWAGMYFPDXBNJZSQVHLCKE"[n%23]===s[8]; }
+  if(/^[ABCDEFGHJNPQRSUVW][0-9]{7}[0-9A-J]$/.test(s)){ let sp=0, si=0; for(let i=1;i<=7;i++){ let k=+s[i]; if(i%2===0) sp+=k; else { k*=2; si+=Math.floor(k/10)+k%10; } }
+    const c=(10-((sp+si)%10))%10; return s[8]===String(c)||s[8]==="JABCDEFGHI"[c]; }
+  return false;
+}
+const facCadenaAlta = (nif,num,fecha,tipo,cuota,importe,ant,gen) => `IDEmisorFactura=${nif}&NumSerieFactura=${num}&FechaExpedicionFactura=${facFecha(fecha)}&TipoFactura=${tipo}&CuotaTotal=${cuota}&ImporteTotal=${importe}&Huella=${ant||""}&FechaHoraHusoGenRegistro=${gen}`;
+const facCadenaAnul = (nif,num,fecha,ant,gen) => `IDEmisorFacturaAnulada=${nif}&NumSerieFacturaAnulada=${num}&FechaExpedicionFacturaAnulada=${facFecha(fecha)}&Huella=${ant||""}&FechaHoraHusoGenRegistro=${gen}`;
+async function facSha(s){ const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)); return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,"0")).join("").toUpperCase(); }
+const facUrlQR = f => `${FAC_URL_QR[f.entorno]||FAC_URL_QR.pruebas}?nif=${encodeURIComponent(f.emisor_nif)}&numserie=${encodeURIComponent(f.num_serie)}&fecha=${facFecha(f.fecha)}&importe=${fac2(f.total)}`;
+// Código QR (ISO/IEC 18004, corrección de errores M) en SVG, con su zona de silencio
+function facQR(url, mm=35){
+  const q=QRGEN(0,"M"); q.addData(url,"Byte"); q.make(); const n=q.getModuleCount(), b=4, N=n+2*b; let d="";
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(q.isDark(r,c)) d+=`M${c+b} ${r+b}h1v1h-1z`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${N} ${N}" width="${mm}mm" height="${mm}mm" shape-rendering="crispEdges" role="img" aria-label="Código QR tributario"><rect width="${N}" height="${N}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+}
+
+// ---------- Demo: el mismo cálculo que hace el servidor, guardado en este navegador ----------
+const FacLocal = {
+  K(){ return "metriax-fac-"+TENANT; },
+  leer(){ try{ const d=JSON.parse(localStorage.getItem(this.K())||"null"); if(d&&d.facturas) return d; }catch(_){} return {cfg:null,facturas:[],regs:[],cont:{}}; },
+  guardar(d){ try{ localStorage.setItem(this.K(),JSON.stringify(d)); }catch(_){ throw new Error("Este navegador se ha quedado sin espacio."); } },
+  ahora(){ const d=new Date(), o=-d.getTimezoneOffset(), p=n=>String(Math.abs(n)).padStart(2,"0"); return d.toLocaleString("sv-SE").replace(" ","T").slice(0,19)+(o>=0?"+":"-")+p(Math.trunc(o/60))+":"+p(o%60); },
+  hoy(){ return new Date().toLocaleDateString("sv-SE"); },
+  lineas(ls, ivaDef, signo){
+    if(!Array.isArray(ls)||!ls.length) throw new Error("sin_lineas"); if(ls.length>300) throw new Error("demasiadas_lineas");
+    const sal=ls.map(l=>{ const n=String(l.n||"").trim(), q=+l.q, p=+l.p, iva=l.iva==null||l.iva===""?+ivaDef:+l.iva;
+      if(!n||n.length>120) throw new Error("linea_nombre"); if(!(q>0&&q<=9999)||Math.round(q*1000)!==q*1000) throw new Error("linea_cantidad");
+      if(!(p>=0&&p<=99999)) throw new Error("linea_precio"); if(!FAC_IVAS.includes(iva)) throw new Error("linea_iva");
+      return {n,q:q*signo,p:Math.round(p*1e4)/1e4,iva,total:+fac2(q*p)*signo}; });
+    const tipos=[...new Set(sal.map(l=>l.iva))].sort((a,b)=>a-b);
+    const desglose=tipos.map(iva=>{ const t=+fac2(sal.filter(l=>l.iva===iva).reduce((s,l)=>s+l.total,0)), b=+fac2(t/(1+iva/100)); return {iva,base:b,cuota:+fac2(t-b),total:t}; });
+    const total=+fac2(desglose.reduce((s,d)=>s+d.total,0)), base=+fac2(desglose.reduce((s,d)=>s+d.base,0));
+    return {lineas:sal,desglose,base,cuota:+fac2(total-base),total};
+  },
+  dest(p){ p=p||{}; const nif=String(p.nif||"").toUpperCase().replace(/[^0-9A-Z]/g,""), nombre=String(p.nombre||"").trim(), domicilio=String(p.domicilio||"").trim();
+    if(!facNifOk(nif)) throw new Error("dest_nif"); if(!nombre||nombre.length>120) throw new Error("dest_nombre"); if(!domicilio||domicilio.length>200) throw new Error("dest_domicilio");
+    return {nif,nombre,domicilio,email:String(p.email||"").trim().slice(0,120)||null}; },
+  async encadenar(d,f,tipo){
+    const prev=d.regs.filter(r=>r.emisor_nif===f.emisor_nif&&r.entorno===f.entorno).slice(-1)[0]; let g=this.ahora();
+    if(prev && new Date(g)<new Date(prev.generado)) g=prev.generado;
+    const cuota=tipo==="alta"?fac2(f.cuota):null, importe=tipo==="alta"?fac2(f.total):null;
+    const cadena=tipo==="alta"?facCadenaAlta(f.emisor_nif,f.num_serie,f.fecha,f.tipo,cuota,importe,prev&&prev.huella,g):facCadenaAnul(f.emisor_nif,f.num_serie,f.fecha,prev&&prev.huella,g);
+    const r={id:(d.regs.length?d.regs[d.regs.length-1].id:0)+1,tenant:TENANT,entorno:f.entorno,factura_id:f.id,tipo,emisor_nif:f.emisor_nif,num_serie:f.num_serie,fecha:f.fecha,
+      tipo_factura:tipo==="alta"?f.tipo:null,cuota,importe,anterior_id:prev?prev.id:null,anterior_huella:prev?prev.huella:null,generado:g,cadena,huella:await facSha(cadena),
+      estado:"pendiente",intentos:0,enviado:null,csv:null,codigo:null,mensaje:null,creado:new Date().toISOString()};
+    d.regs.push(r); return r;
+  },
+  async guardarF(d,tipo,calc,dest,desc,forma,cuenta,rectifica,motivo,sustituye){
+    const c=d.cfg, serie=tipo==="F2"?c.serie_t:["F1","F3"].includes(tipo)?c.serie_f:c.serie_r, anio=+this.hoy().slice(0,4), k=[c.entorno,serie,anio].join("|");
+    const n=(d.cont[k]||0)+1; d.cont[k]=n;
+    const f={id:nid(),tenant:TENANT,entorno:c.entorno,serie,anio,numero:n,num_serie:`${serie}${anio}-${String(n).padStart(6,"0")}`,tipo,fecha:this.hoy(),
+      emisor_nif:c.nif,emisor_razon:c.razon,emisor_domicilio:[c.domicilio,`${c.cp} ${c.municipio}`,c.provincia].filter(Boolean).join(", "),destinatario:dest,
+      lineas:calc.lineas,desglose:calc.desglose,base:calc.base,cuota:calc.cuota,total:calc.total,
+      descripcion:(desc||"").trim()||(tipo[0]==="R"?"Rectificación":"Servicio de hostelería"),forma_pago:forma||null,cuenta_id:cuenta||null,
+      rectifica:rectifica||null,tipo_rect:rectifica?"I":null,motivo:motivo||null,sustituye:sustituye||null,estado:"emitida",anulada_en:null,anulada_motivo:null,creado:new Date().toISOString()};
+    d.facturas.push(f); const r=await this.encadenar(d,f,"alta"); this.guardar(d); return {...f,registro:r};
+  },
+  async emitir(o){
+    const d=this.leer(), c=d.cfg; if(!c) throw new Error("sin_datos_fiscales"); let ls=o.lineas, forma=o.forma, vivas=d.facturas.filter(f=>f.entorno===c.entorno&&f.estado==="emitida");
+    if(o.tipo==="F3"){ const ts=(o.sustituye||[]).map(id=>d.facturas.find(f=>f.id===id)); if(!ts.length||ts.some(t=>!t||t.tipo!=="F2"||t.estado!=="emitida"||t.entorno!==c.entorno)) throw new Error("f3_ticket_no_valido");
+      if(ts.some(t=>vivas.some(x=>x.tipo==="F3"&&(x.sustituye||[]).includes(t.id)))) throw new Error("f3_ya_canjeado");
+      if(ts.some(t=>vivas.some(x=>x.rectifica===t.id))) throw new Error("f3_ticket_rectificado");
+      ls=ts.flatMap(t=>t.lineas.map(l=>({n:l.n,q:l.q,p:l.p,iva:l.iva}))); forma=forma||ts[0].forma_pago; }
+    else if(o.cuenta){ const cu=Store.get("cuentas",o.cuenta); if(!cu) throw new Error("cuenta_no_existe");
+      if(vivas.some(f=>f.cuenta_id===o.cuenta)) throw Object.assign(new Error("duplicate"),{code:"23505"});
+      ls=(cu.items||[]).filter(i=>+i.q>0).map(i=>({n:i.n,q:i.q,p:i.p,iva:i.iva})); forma=forma||cu.forma; }
+    const calc=this.lineas(ls,c.iva_defecto,1); if(calc.total<=0) throw new Error("total_cero"); if(o.tipo==="F2"&&calc.total>3000) throw new Error("simplificada_max");
+    return this.guardarF(d,o.tipo,calc,o.tipo==="F2"?null:this.dest(o.dest),o.desc,forma,o.cuenta,null,null,o.tipo==="F3"?o.sustituye:null);
+  },
+  async rectificar(id,ls,motivo){
+    const d=this.leer(), c=d.cfg; if(!c) throw new Error("sin_datos_fiscales"); if(String(motivo||"").trim().length<3) throw new Error("motivo");
+    const o=d.facturas.find(f=>f.id===id); if(!o||o.entorno!==c.entorno) throw new Error("factura_no_existe"); if(o.estado!=="emitida"||!["F1","F2","F3"].includes(o.tipo)) throw new Error("no_rectificable");
+    if(o.tipo==="F2"&&d.facturas.some(x=>x.tipo==="F3"&&x.estado==="emitida"&&(x.sustituye||[]).includes(o.id))) throw new Error("rectifica_la_completa");
+    const calc=this.lineas(ls||o.lineas.map(l=>({n:l.n,q:l.q,p:l.p,iva:l.iva})),c.iva_defecto,-1), ya=d.facturas.filter(x=>x.rectifica===o.id&&x.estado==="emitida").reduce((s,x)=>s-x.total,0);
+    if(-calc.total+ya>o.total+0.001) throw new Error("rectifica_mas_que_original");
+    return this.guardarF(d,o.tipo==="F2"?"R5":"R1",calc,o.destinatario,"Rectificación de "+o.num_serie,o.forma_pago,null,o.id,String(motivo).trim(),null);
+  },
+  async anular(id,motivo){
+    const d=this.leer(); if(String(motivo||"").trim().length<3) throw new Error("motivo"); const o=d.facturas.find(f=>f.id===id); if(!o) throw new Error("factura_no_existe"); if(o.estado!=="emitida") throw new Error("ya_anulada");
+    if(d.facturas.some(x=>x.estado==="emitida"&&(x.rectifica===o.id||(x.sustituye||[]).includes(o.id)))) throw new Error("tiene_dependientes");
+    Object.assign(o,{estado:"anulada",anulada_en:new Date().toISOString(),anulada_motivo:String(motivo).trim().slice(0,300)}); const r=await this.encadenar(d,o,"anulacion"); this.guardar(d); return {...o,registro:r};
+  },
+  async guardarCfg(p){
+    const d=this.leer(), nif=String(p.nif||"").toUpperCase().replace(/[^0-9A-Z]/g,""); if(!facNifOk(nif)) throw new Error("nif");
+    if(d.cfg&&d.cfg.nif!==nif&&d.facturas.length) throw new Error("nif_con_facturas");
+    d.cfg={...(d.cfg||{creado:new Date().toISOString()}),...p,nif,entorno:"pruebas",tenant:TENANT,actualizado:new Date().toISOString()}; this.guardar(d); return d.cfg;
+  },
+  // En la demo no se envía nada: se simula la respuesta para enseñar el flujo
+  simular(){ const d=this.leer(); let n=0; d.regs.forEach(r=>{ if(r.estado==="pendiente"){ r.estado="correcto"; r.intentos=1; r.enviado=new Date().toISOString(); r.csv="DEMO-"+nid().slice(-10).toUpperCase(); r.mensaje="Simulación: en la demo no se envía nada a la AEAT."; n++; } });
+    if(n){ d.cfg&&Object.assign(d.cfg,{ultimo_envio:new Date().toISOString(),ultimo_estado:"Correcto",ultimo_error:null}); this.guardar(d); } return n; },
+  async verificar(){ const d=this.leer(); let prev=null, malos=0, primero=null;
+    for(const r of d.regs){ const f=d.facturas.find(x=>x.id===r.factura_id), p=prev&&prev.entorno===r.entorno&&prev.emisor_nif===r.emisor_nif?prev:null;
+      const esp=r.tipo==="alta"?facCadenaAlta(f.emisor_nif,f.num_serie,f.fecha,f.tipo,fac2(f.cuota),fac2(f.total),r.anterior_huella,r.generado):facCadenaAnul(f.emisor_nif,f.num_serie,f.fecha,r.anterior_huella,r.generado);
+      if(r.huella!==await facSha(r.cadena)||(r.anterior_huella||null)!==(p?p.huella:null)||r.cadena!==esp){ malos++; primero=primero||r.num_serie; } prev=r; }
+    return {registros:d.regs.length,errores:malos,primero_malo:primero}; }
+};
+
+// ---------- Acceso a la facturación desde cualquier pantalla ----------
+const Fac = {
+  cfg:null, facturas:[], regs:[], cargado:false, cargando:null, error:"", onCambio:null, _env:null,
+  supa(){ return Store.modo==="supa"; },
+  activa(){ return !this.supa() || FAC_SERVIDOR; },
+  reset(){ this.cfg=null; this.facturas=[]; this.regs=[]; this.cargado=false; this.error=""; },
+  aviso(){ try{ this.onCambio && this.onCambio(); }catch(_){} },
+  async cargar(){
+    if(!this.activa()){ this.cfg=null; this.cargado=true; return; }
+    if(this.cargando) return this.cargando;
+    this.cargando=(async()=>{ try{
+      if(this.supa()){
+        const sb=Store.sb, {data:c,error:e1}=await sb.from("fac_config").select("*").eq("tenant",TENANT).maybeSingle(); if(e1) throw e1;
+        this.cfg=c||null; const ent=(c&&c.entorno)||"pruebas";
+        if(Acceso.admin()){
+          const [{data:fs,error:e2},{data:rs,error:e3}]=await Promise.all([
+            sb.from("facturas").select("*").eq("tenant",TENANT).eq("entorno",ent).order("creado",{ascending:false}).limit(5000),
+            sb.from("fac_registros").select("id,factura_id,tipo,estado,codigo,mensaje,csv,enviado,huella,anterior_huella,generado,intentos,num_serie,creado").eq("tenant",TENANT).eq("entorno",ent).order("id",{ascending:false}).limit(10000)]);
+          if(e2) throw e2; if(e3) throw e3; this.facturas=fs||[]; this.regs=rs||[];
+        }
+      } else { const d=FacLocal.leer(), ent=(d.cfg&&d.cfg.entorno)||"pruebas"; this.cfg=d.cfg; this.facturas=d.facturas.filter(f=>f.entorno===ent).slice().reverse(); this.regs=d.regs.filter(r=>r.entorno===ent).slice().reverse(); }
+      this.error=""; this.cargado=true;
+    }catch(e){ console.warn("facturación",e); this.error="No se han podido cargar las facturas. Si acabamos de activar la facturación, recarga la página en un minuto."; this.cargado=true; } })();
+    const pr=this.cargando; pr.finally(()=>{ if(this.cargando===pr) this.cargando=null; });
+    return pr;
+  },
+  async rpc(fn,args){ const {data,error}=await Store.sb.rpc(fn,{p_tenant:TENANT,...args}); if(error) throw error; return data; },
+  tras(f){ if(!f) return f; const {registro,...fa}=f; this.facturas=[fa,...this.facturas.filter(x=>x.id!==fa.id)]; if(registro) this.regs=[registro,...this.regs.filter(r=>r.id!==registro.id)]; this.enviar(); this.aviso(); return fa; },
+  async emitir(o){ return this.tras(this.supa()?await this.rpc("fac_emitir",{p_tipo:o.tipo,p_cuenta:o.cuenta||null,p_lineas:o.lineas||null,p_dest:o.dest||null,p_sustituye:o.sustituye||null,p_desc:o.desc||null,p_forma:o.forma||null}):await FacLocal.emitir(o)); },
+  async rectificar(id,lineas,motivo){ return this.tras(this.supa()?await this.rpc("fac_rectificar",{p_factura:id,p_lineas:lineas||null,p_motivo:motivo}):await FacLocal.rectificar(id,lineas,motivo)); },
+  async anular(id,motivo){ return this.tras(this.supa()?await this.rpc("fac_anular",{p_factura:id,p_motivo:motivo}):await FacLocal.anular(id,motivo)); },
+  async guardarCfg(c){ this.cfg=this.supa()?await this.rpc("fac_config_guardar",{p_cfg:c}):await FacLocal.guardarCfg(c); this.aviso(); return this.cfg; },
+  async verificar(){ return this.supa()?await this.rpc("fac_verificar",{}):await FacLocal.verificar(); },
+  // Pide a la función «verifactu» que envíe lo pendiente (respeta la espera que marca la AEAT)
+  enviar(manual){
+    if(this._env) return this._env;
+    this._env=(async()=>{ try{
+      if(this.supa()){ const {data,error}=await Store.sb.functions.invoke("verifactu",{body:{tenant:TENANT}}); if(error) throw error;
+        if(manual) toast(data&&data.estado==="esperando_turno"?"La AEAT pide esperar entre envíos: sale en menos de un minuto.":data&&data.estado==="nada_pendiente"?"No hay nada pendiente de enviar.":data&&data.error?"La AEAT no ha respondido. Se reintenta solo.":"Enviado a la AEAT.");
+        await new Promise(r=>setTimeout(r,800)); if(Acceso.admin()) await this.cargar();
+      } else { await new Promise(r=>setTimeout(r,1200)); const n=FacLocal.simular(); if(n||manual) await this.cargar(); if(manual) toast(n?"Demo: envío simulado (no se manda nada a Hacienda).":"No hay nada pendiente de enviar."); }
+    }catch(_){ if(manual) toast("No se ha podido contactar con el servicio de envío. Se reintenta solo."); } })();
+    const pr=this._env; pr.finally(()=>{ if(this._env===pr) this._env=null; this.aviso(); });
+    return pr;
+  },
+  alta(f){ return this.regs.find(r=>r.factura_id===f.id&&r.tipo==="alta"); },
+  anulReg(f){ return this.regs.find(r=>r.factura_id===f.id&&r.tipo==="anulacion"); },
+  estadoAeat(f){ const r=(f.estado==="anulada"&&this.anulReg(f))||this.alta(f); return r?r.estado:"pendiente"; },
+  pendientes(){ return this.regs.filter(r=>r.estado==="pendiente").length; },
+  rechazadas(){ return this.regs.filter(r=>r.estado==="incorrecto"); },
+  deCuenta(cid){ return this.facturas.find(f=>f.cuenta_id===cid&&f.estado==="emitida"); },
+  canjeDe(f){ return this.facturas.find(x=>x.tipo==="F3"&&x.estado==="emitida"&&(x.sustituye||[]).includes(f.id)); },
+  rectsDe(f){ return this.facturas.filter(x=>x.rectifica===f.id&&x.estado==="emitida"); },
+  porFacturar(){ if(!this.cfg) return []; const desde=new Date(this.cfg.creado||0).getTime(), hechas=new Set(this.facturas.filter(f=>f.estado==="emitida"&&f.cuenta_id).map(f=>f.cuenta_id));
+    return [...Store.data.cuentas].filter(([id,c])=>c.t>=desde && !hechas.has(id) && (c.items||[]).some(i=>+i.q>0)).map(([id,c])=>({...c,id})).sort((a,b)=>b.t-a.t); },
+  // Al cobrar una mesa o un pedido para llevar: emite el ticket (factura simplificada) si está activado
+  async alCobrar(cid){
+    try{
+      if(!this.activa()) return null;
+      if(!Store.personal()||!cid) return null; if(!this.cargado) await this.cargar(); const c=this.cfg; if(!c||!c.ticket_auto) return null;
+      const f=await this.emitir({tipo:"F2",cuenta:cid}); toast(`Ticket ${f.num_serie} emitido (${eur(f.total)}).`);
+      if(c.imprimir_auto) facImprimir(f, c);
+      return f;
+    }catch(e){ const m=facError(e); if(!/ya tiene su factura/.test(m)) toast("Cobrado, pero el ticket no se ha emitido: "+m+" Puedes emitirlo en Facturación › Por facturar."); return null; }
+  }
+};
+
+// ---------- Documento de la factura (pantalla e impresión) ----------
+const FAC_DOC_CSS = `.fd{font:12.5px/1.45 "Helvetica Neue",Arial,sans-serif;color:#111;background:#fff}
+.fd *{box-sizing:border-box}.fd .qr{text-align:center;margin:0 0 10px}.fd .qr small{display:block;font-size:11px;letter-spacing:.04em}.fd .qr b{display:block;font-size:12px;letter-spacing:.12em;margin-top:2px}
+.fd .prueba{border:2px dashed #b00;color:#b00;text-align:center;font-weight:700;padding:4px;margin:6px 0 10px;letter-spacing:.04em}
+.fd .anulada{border:3px solid #b00;color:#b00;text-align:center;font-weight:800;font-size:18px;padding:6px;margin:6px 0 12px;letter-spacing:.1em}
+.fd h1{font-size:20px;margin:0 0 2px;letter-spacing:.02em}.fd .mut{color:#555}.fd table{width:100%;border-collapse:collapse}
+.fd th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#555;border-bottom:1.5px solid #111;padding:6px 4px}
+.fd td{padding:6px 4px;border-bottom:1px solid #e5e5e5;vertical-align:top}.fd .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fd .cab{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;margin:6px 0 14px}.fd .caja{border:1.5px solid #111;border-radius:6px;padding:10px 12px}
+.fd .caja .t{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#555;margin-bottom:4px}.fd .tit{font-size:16px;font-weight:800;letter-spacing:.04em;margin-bottom:6px}
+.fd .tot{display:grid;grid-template-columns:1fr 260px;gap:18px;margin-top:14px;align-items:start}.fd .tot .fila{display:flex;justify-content:space-between;padding:4px 0}
+.fd .tot .gran{border-top:2px solid #111;margin-top:4px;padding-top:8px;font-size:18px;font-weight:800}.fd .nota{margin-top:14px;font-size:11.5px;color:#333}
+.fd .pie{margin-top:22px;padding-top:8px;border-top:1px solid #ddd;font-size:10.5px;color:#666;text-align:center}
+.fd.tk{width:72mm;font:12px/1.35 "Courier New",monospace}.fd.tk h1{font-size:15px;text-align:center}.fd.tk .c{text-align:center}.fd.tk hr{border:0;border-top:1px dashed #000;margin:6px 0}
+.fd.tk .l{display:flex;justify-content:space-between;gap:8px}.fd.tk .gran{font-size:16px;font-weight:700}.fd.tk table td,.fd.tk table th{padding:2px 0;border:0;font-size:11px}`;
+function facDocHTML(f, cfg){
+  cfg=cfg||Fac.cfg||{}; const ticket=["F2","R5"].includes(f.tipo), [titulo]=FAC_TIPOS[f.tipo]||[f.tipo], com=cfg.nombre_comercial||"";
+  const hora=f.creado?new Date(f.creado).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"}):"";
+  const ref=id=>Fac.facturas.find(x=>x.id===id), rect=f.rectifica&&ref(f.rectifica), sust=(f.sustituye||[]).map(ref).filter(Boolean);
+  const qr=`<div class="qr"><small>QR tributario:</small>${facQR(facUrlQR(f),ticket?32:35)}<b>VERI*FACTU</b></div>`;
+  const avisos=(f.entorno!=="produccion"?`<div class="prueba">PRUEBA · SIN VALIDEZ FISCAL</div>`:"")+(f.estado==="anulada"?`<div class="anulada">ANULADA</div>`:"");
+  const ivaTxt=d=>`${facIVA(d.iva)}`;
+  if(ticket){
+    return `<div class="fd tk">${qr}${avisos}<h1>${esc(com||f.emisor_razon)}</h1><div class="c">${com?esc(f.emisor_razon)+"<br>":""}NIF ${esc(f.emisor_nif)}<br>${esc(f.emisor_domicilio||"")}</div><hr>
+      <div class="c"><b>${esc(titulo.toUpperCase())}</b><br>Nº ${esc(f.num_serie)}<br>${facFechaL(f.fecha)} ${hora}</div>
+      ${rect?`<div class="c">Rectifica a ${esc(rect.num_serie)} (${facFechaL(rect.fecha)})${f.motivo?`<br>Motivo: ${esc(f.motivo)}`:""}</div>`:""}<hr>
+      ${f.lineas.map(l=>`<div class="l"><span>${fmtCant(l.q)} x ${esc(l.n)}</span><span>${fac2(l.total).replace(".",",")}</span></div>`).join("")}<hr>
+      <div class="l gran"><span>TOTAL</span><span>${eur(f.total)}</span></div>
+      <table><thead><tr><th>IVA</th><th class="n">Base</th><th class="n">Cuota</th></tr></thead><tbody>${f.desglose.map(d=>`<tr><td>${ivaTxt(d)}</td><td class="n">${fac2(d.base).replace(".",",")}</td><td class="n">${fac2(d.cuota).replace(".",",")}</td></tr>`).join("")}</tbody></table>
+      <div class="c">IVA incluido${f.forma_pago?` · Pago: ${esc(f.forma_pago)}`:""}</div>${cfg.pie?`<hr><div class="c">${esc(cfg.pie)}</div>`:""}
+      <hr><div class="c" style="font-size:10px">Factura verificable en la sede electrónica de la AEAT</div></div>`;
+  }
+  const dst=f.destinatario||{};
+  return `<div class="fd">${qr}${avisos}
+    <div class="cab"><div><h1>${esc(com||f.emisor_razon)}</h1><div>${com?esc(f.emisor_razon)+" · ":""}NIF ${esc(f.emisor_nif)}</div><div class="mut">${esc(f.emisor_domicilio||"")}</div></div>
+      <div class="caja"><div class="tit">${esc(titulo.toUpperCase())}</div><div class="l">Número: <b>${esc(f.num_serie)}</b></div><div>Fecha de expedición: <b>${facFechaL(f.fecha)}</b></div></div></div>
+    <div class="caja" style="margin-bottom:14px"><div class="t">Cliente</div><b>${esc(dst.nombre||"")}</b><br>NIF ${esc(dst.nif||"")}<br>${esc(dst.domicilio||"")}</div>
+    <table><thead><tr><th>Concepto</th><th class="n">Cant.</th><th class="n">Precio sin IVA</th><th class="n">IVA</th><th class="n">Importe sin IVA</th></tr></thead><tbody>
+      ${f.lineas.map(l=>{ const pu=l.p/(1+l.iva/100), imp=l.total/(1+l.iva/100); return `<tr><td>${esc(l.n)}</td><td class="n">${fmtCant(l.q)}</td><td class="n">${(Math.round(pu*10000)/10000).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:4})} €</td><td class="n">${facIVA(l.iva)}</td><td class="n">${eur(imp)}</td></tr>`; }).join("")}</tbody></table>
+    <div class="tot"><div>${rect?`<div class="nota"><b>Factura rectificativa por diferencias</b> de la factura ${esc(rect.num_serie)} de ${facFechaL(rect.fecha)}.${f.motivo?` Motivo: ${esc(f.motivo)}.`:""}</div>`:""}
+        ${sust.length?`<div class="nota">Sustituye a las facturas simplificadas: ${sust.map(s=>`${esc(s.num_serie)} (${facFechaL(s.fecha)})`).join(", ")}.</div>`:""}
+        ${f.forma_pago?`<div class="nota">Forma de pago: ${esc(f.forma_pago)}</div>`:""}${f.descripcion&&!/^Servicio de hostelería$|^Rectificación/.test(f.descripcion)?`<div class="nota">${esc(f.descripcion)}</div>`:""}
+        <table style="margin-top:12px"><thead><tr><th>Tipo IVA</th><th class="n">Base imponible</th><th class="n">Cuota</th><th class="n">Total</th></tr></thead><tbody>${f.desglose.map(d=>`<tr><td>${ivaTxt(d)}</td><td class="n">${eur(d.base)}</td><td class="n">${eur(d.cuota)}</td><td class="n">${eur(d.total)}</td></tr>`).join("")}</tbody></table></div>
+      <div><div class="fila"><span>Base imponible</span><b>${eur(f.base)}</b></div><div class="fila"><span>IVA</span><b>${eur(f.cuota)}</b></div><div class="fila gran"><span>Total</span><span>${eur(f.total)}</span></div></div></div>
+    ${cfg.pie?`<div class="nota">${esc(cfg.pie)}</div>`:""}<div class="pie">Factura verificable en la sede electrónica de la AEAT · Emitida con ${esc(PLATAFORMA)}</div></div>`;
+}
+const fmtCant = q => (+q).toLocaleString("es-ES",{maximumFractionDigits:3});
+(()=>{ try{ const st=document.createElement("style"); st.textContent=FAC_DOC_CSS; document.head.appendChild(st); }catch(_){} })();
+function facImprimir(f, cfg){
+  const ticket=["F2","R5"].includes(f.tipo);
+  const html=`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(f.num_serie)}</title><style>@page{size:${ticket?"80mm auto;margin:3mm":"A4;margin:14mm"}}body{margin:0}${FAC_DOC_CSS}</style></head><body>${facDocHTML(f,cfg)}</body></html>`;
+  const fr=document.createElement("iframe"); fr.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0"; fr.title="Impresión"; document.body.appendChild(fr);
+  fr.contentDocument.open(); fr.contentDocument.write(html); fr.contentDocument.close();
+  setTimeout(()=>{ try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch(_){} setTimeout(()=>fr.remove(),4000); },300);
+}
+
 const Acceso = {
   cfg(){ const c=Store.get("config","seguridad")||{}; return c; },
   usuario(){ return (this.cfg().local||{}).usuario||ACCESO_DEF.usuario; },
@@ -1370,7 +1647,7 @@ function VLegal({doc}){
   return { legal:true, titulo:D.t+" · "+cfgBar().nombre, pintar, alCambiar:pintar, salir(){} };
 }
 
-function reiniciarVista(){ if(vista && vista.salir) vista.salir(); vista=null; ir(); }
+function reiniciarVista(){ if(vista && vista.salir) vista.salir(); vista=null; Fac.reset(); ir(); }
 function ir(){
   let r=ruta(); const ac=acceso(r);
   if(ac==="login") r={v:"login",destino:r.v}; else if(ac==="rol") r={v:"sinacceso",destino:r.v}; else if(ac==="pin") r={v:"pin",destino:r.v}; else if(ac==="local") r={v:"local",destino:r.v};
@@ -2850,6 +3127,7 @@ function VPanel(){
   }
   // Clics, cambios y formularios de estas pestañas (devuelven true si los han atendido)
   async function clicNeg(t){
+    if(await clicFac(t)) return true;
     const fp=t.closest("[data-fped]"); if(fp){ fPed=fp.dataset.fped; return pintar(true),true; }
     const pr=t.closest("[data-per]"); if(pr){ perEco=pr.dataset.per; return pintar(true),true; }
     const od=t.closest("[data-ord]"); if(od){ ordEco=od.dataset.ord; return pintar(true),true; }
@@ -2873,12 +3151,14 @@ function VPanel(){
     return false;
   }
   async function cambioNeg(t){
+    if(await cambioFac(t)) return true;
     if(t.id==="dia-res"&&t.value){ diaRes=t.value; return pintar(true),true; }
     if(t.id==="cat-inv"){ catInv=t.value; return pintar(true),true; }
     if(t.dataset.resMesa){ const r=Store.get("reservas",t.dataset.resMesa); await Acc.reserva(r.id,{mesa:t.value?+t.value:null},"encargado"); toast(t.value?`${r.nombre}: mesa ${t.value}.`:"Mesa quitada de la reserva."); t.blur(); return pintar(true),true; }
     return false;
   }
   async function enviarNeg(f){
+    if(await enviarFac(f)) return true;
     const v=id=>f.querySelector(id)?.value??"", num=id=>parseFloat(String(v(id)).replace(",","."));
     if(f.id==="f-res-tel"){ const d={nombre:v("#rt-nombre").trim(),tel:v("#rt-tel").trim(),fecha:v("#rt-fecha"),hora:v("#rt-hora"),personas:+v("#rt-personas")||2,mesa:v("#rt-mesa"),nota:v("#rt-nota").trim()};
       if(!d.nombre||!d.fecha||!d.hora) return toast("Pon nombre, día y hora."),true; await Acc.reservar(d,"telefono","encargado"); diaRes=d.fecha; toast(`Reserva de ${d.nombre} apuntada: ${d.fecha} a las ${d.hora}.`); return pintar(true),true; }
@@ -2973,6 +3253,289 @@ function VPanel(){
         <button class="btn rojo" type="submit">Entrar en administración</button></form>
       <button class="btn peq" data-adm-cancelar>Cancelar</button></div></div>`;
   }
+  // ===== Facturación y VERI*FACTU (panel del dueño) =====
+  let facSub="facturas", facPer="mes", facTipo="", facQ="", hojaFac=null, facLin=[], facDest={}, facVer=null, facOcupado=false, facPoll=null, facBorr={};
+  // Lo escrito en los formularios de facturación sobrevive a los repintados (llega un pedido, termina un envío…)
+  const facGuardarBorr=()=>app.querySelectorAll("form[id^='f-fac-'] [id]").forEach(i=>{ if(/^(INPUT|SELECT|TEXTAREA)$/.test(i.tagName)) facBorr[i.id]=i.type==="checkbox"?i.checked:i.value; });
+  const facPonerBorr=()=>{ for(const [id,v] of Object.entries(facBorr)){ const i=app.querySelector("form[id^='f-fac-'] #"+CSS.escape(id)); if(!i||i.disabled) continue; if(i.type==="checkbox") i.checked=v; else if(i.value!==v) i.value=v; } };
+  const FAC_PER={mes:"Este mes",mesant:"Mes anterior",trim:"Este trimestre",trimant:"Trimestre anterior",anio:"Este año",todo:"Todo"};
+  const facRango=k=>{ const d=new Date(), y=d.getFullYear(), m=d.getMonth(), q=Math.floor(m/3)*3, iso=(Y,M,D)=>new Date(Y,M,D).toLocaleDateString("sv-SE");
+    return ({mes:[iso(y,m,1),iso(y,m+1,0)],mesant:[iso(y,m-1,1),iso(y,m,0)],trim:[iso(y,q,1),iso(y,q+3,0)],trimant:[iso(y,q-3,1),iso(y,q,0)],anio:[iso(y,0,1),iso(y,11,31)],todo:["0000-01-01","9999-12-31"]})[k]; };
+  const facNum=x=>parseFloat(String(x??"").replace(",","."));
+  const facCuenta=f=>f.estado==="emitida" && !(f.tipo==="F2" && Fac.canjeDe(f));   // lo que suma en el libro (un ticket canjeado lo sustituye su F3)
+  const facPill=f=>{ const e=Fac.estadoAeat(f), [c,t]=FAC_AEAT[e]||["",e]; return `<span class="pill ${c}">${Store.modo!=="supa"&&e==="correcto"?"Aceptada (simulado)":t}</span>`; };
+  const facTipoPill=f=>`<span class="pill fac-t-${f.tipo[0]}">${esc((FAC_TIPOS[f.tipo]||[f.tipo,f.tipo])[1])}</span>`;
+  const lugarCuenta=c=>c.llevar?`Para llevar${c.codigo?` · ${esc(c.codigo)}`:""}`:c.mesa?`Mesa ${c.mesa}`:"Barra";
+  Fac.onCambio=()=>{ if(app.querySelector(".panel") && (panelTab==="facturacion"||hojaFac)) pintar(); };
+
+  function facturacionV(){
+    if(!Fac.cargado){ if(!Fac.cargando) Fac.cargar().then(()=>pintar(true)); return `<div class="p-cab"><div><h1>Facturación</h1><p>Cargando las facturas…</p></div></div>`; }
+    const c=Fac.cfg, demo=Store.modo!=="supa";
+    const cab=`<div class="p-cab"><div><h1>Facturación</h1><p>Tickets y facturas con VERI*FACTU: numeración correlativa, huella encadenada y envío a la Agencia Tributaria.</p></div>${c?`<div class="acc-fila"><button class="b-ui rojo" data-fnueva>+ Factura completa</button></div>`:""}</div>`;
+    if(Fac.error) return cab+`<div class="aviso-ui">${esc(Fac.error)}</div><button class="b-ui" data-frecargar>Reintentar</button>`;
+    if(!Fac.activa()) return cab+`<div class="card fac-intro" style="max-width:720px"><h2>${ico("shield")} Facturación VERI*FACTU · muy pronto</h2><p>Estamos terminando la conexión con la Agencia Tributaria. En cuanto esté lista, desde aquí tendrás tickets con QR tributario al cobrar, facturas completas, canjes, devoluciones con rectificativa y el libro de IVA para tu gestoría.</p><p class="ayuda" style="margin:0">Obligatorio para sociedades desde el 1 de enero de 2027 y para autónomos desde el 1 de julio de 2027.</p></div>`;
+    if(!c) return cab+facAltaV();
+    const banda=demo?`<div class="aviso-ui">${ico("shield")} Demo: las facturas se guardan en este navegador y el envío a la AEAT se simula. Nada llega a Hacienda.</div>`
+      :c.entorno!=="produccion"?`<div class="aviso-ui">${ico("shield")} Entorno de PRUEBAS de la AEAT: los registros van al servicio de pruebas y las facturas no tienen validez fiscal. ${esc(PLATAFORMA)} activa producción cuando el certificado esté listo.</div>`:"";
+    const pend=Fac.porFacturar().length, rech=Fac.rechazadas().length;
+    const subs=[["facturas","Facturas"],["pendientes","Por facturar",pend],["libro","Libro de IVA"],["aeat","Envíos a la AEAT",rech],["datos","Datos fiscales"]];
+    const cuerpo={facturas:facListaV,pendientes:facPendV,libro:facLibroV,aeat:facAeatV,datos:()=>facDatosV(c)}[facSub]||facListaV;
+    return cab+banda+`<div class="seg-claro fac-subs" role="group" aria-label="Secciones de facturación">${subs.map(([k,t,n])=>`<button data-fsub="${k}" aria-pressed="${facSub===k}">${t}${n?` <span class="b">${n}</span>`:""}</button>`).join("")}</div>`+cuerpo();
+  }
+  function facAltaV(){
+    return `<div class="rej"><div class="card c4 fac-intro"><h2>${ico("shield")} Facturación VERI*FACTU</h2>
+      <ul class="fac-pasos"><li><b>Cada cobro, su ticket.</b> Al cobrar una mesa se emite la factura simplificada con su código QR tributario.</li>
+      <li><b>Inalterable.</b> Numeración correlativa y huella SHA-256 encadenada: ninguna factura se puede borrar ni cambiar.</li>
+      <li><b>Hacienda al día.</b> Cada registro se envía solo a la Agencia Tributaria.</li>
+      <li><b>Completas, canjes y devoluciones</b> con su factura rectificativa, y el libro de IVA listo para tu gestoría.</li></ul>
+      <p class="ayuda" style="margin:0">Obligatorio para sociedades desde el 1 de enero de 2027 y para autónomos desde el 1 de julio de 2027.</p></div>
+      <div class="card c8">${facFormCfg(null)}</div></div>`;
+  }
+  function facFormCfg(c){
+    const hay=Fac.facturas.length>0; c=c||{iva_defecto:10,serie_t:"T",serie_f:"F",serie_r:"R",ticket_auto:true,imprimir_auto:false,nombre_comercial:cfgBar().nombre};
+    return `<h2>Datos fiscales del restaurante</h2><p class="ayuda">Salen en cada factura y en lo que se envía a la AEAT: tienen que coincidir con los del censo de Hacienda.</p>
+    <form class="form-aj" id="f-fac-cfg" autocomplete="off" novalidate>
+      <label>NIF<input id="fc-nif" value="${esc(c.nif||"")}" maxlength="12" required ${hay?"readonly":""} placeholder="B12345674" autocapitalize="characters" spellcheck="false"></label>
+      <label>Razón social<input id="fc-razon" value="${esc(c.razon||"")}" maxlength="120" required placeholder="Restaurante Ejemplo SL"></label>
+      <label>Nombre comercial<input id="fc-com" value="${esc(c.nombre_comercial||"")}" maxlength="120"></label>
+      <label style="grid-column:1/-1">Domicilio fiscal<input id="fc-dom" value="${esc(c.domicilio||"")}" maxlength="200" required placeholder="Calle Mayor, 1"></label>
+      <label>Código postal<input id="fc-cp" value="${esc(c.cp||"")}" maxlength="5" inputmode="numeric" required></label>
+      <label>Municipio<input id="fc-mun" value="${esc(c.municipio||"")}" maxlength="80" required></label>
+      <label>Provincia<input id="fc-prov" value="${esc(c.provincia||"")}" maxlength="80"></label>
+      <label>IVA por defecto<select id="fc-iva">${FAC_IVAS.map(v=>`<option value="${v}" ${+c.iva_defecto===v?"selected":""}>${v} %${v===10?" · hostelería":""}</option>`).join("")}</select></label>
+      <label>Serie de tickets<input id="fc-st" value="${esc(c.serie_t)}" maxlength="4" required ${hay?"readonly":""}></label>
+      <label>Serie de facturas<input id="fc-sf" value="${esc(c.serie_f)}" maxlength="4" required ${hay?"readonly":""}></label>
+      <label>Serie de rectificativas<input id="fc-sr" value="${esc(c.serie_r)}" maxlength="4" required ${hay?"readonly":""}></label>
+      <label class="check-l" style="grid-column:1/-1"><input type="checkbox" id="fc-auto" ${c.ticket_auto?"checked":""}> Emitir el ticket (factura simplificada) al cobrar cada mesa</label>
+      <label class="check-l" style="grid-column:1/-1"><input type="checkbox" id="fc-imp" ${c.imprimir_auto?"checked":""}> Imprimirlo al cobrar, en la impresora de este dispositivo</label>
+      <label style="grid-column:1/-1">Texto al pie (opcional)<input id="fc-pie" value="${esc(c.pie||"")}" maxlength="300" placeholder="Gracias por su visita"></label>
+      <div><button class="b-ui rojo" type="submit">${Fac.cfg?"Guardar":"Activar la facturación"}</button></div></form>`;
+  }
+  function facDatosV(c){
+    const demo=Store.modo!=="supa";
+    return `<div class="rej"><div class="card c8">${facFormCfg(c)}</div>
+      <div class="card c4"><h2>${ico("shield")} Sistema de facturación</h2><dl class="fac-dl">
+        <dt>Sistema</dt><dd>${esc(PLATAFORMA)} · versión 1.0</dd><dt>Modalidad</dt><dd>VERI*FACTU: cada registro se envía a la AEAT</dd>
+        <dt>Integridad</dt><dd>Huella SHA-256 encadenada, registros inalterables</dd><dt>Entorno</dt><dd>${demo?"Demo (sin envío)":c.entorno==="produccion"?"Producción":"Pruebas de la AEAT"}</dd>
+        <dt>Factura desde</dt><dd>${c.creado?new Date(c.creado).toLocaleDateString("es-ES"):"—"}</dd></dl>
+        <button class="b-ui claro" data-fverificar style="width:100%;margin-top:10px">${ico("check")}Verificar la cadena de registros</button>
+        ${facVer?`<p class="fac-ver ${facVer.errores?"mal":"bien"}" role="status">${facVer.errores?`${facVer.errores} registro(s) no cuadran (primero: ${esc(facVer.primero_malo||"")}). Escríbenos por Soporte.`:`Cadena íntegra: ${facVer.registros} registros comprobados.`}</p>`:""}
+        <p class="ayuda" style="margin:10px 0 0">Una factura emitida no se borra ni se cambia: un error se corrige con una rectificativa o, si se emitió por error, anulándola.</p></div></div>`;
+  }
+  function facListaV(){
+    const [d1,d2]=facRango(facPer), q=norm(facQ);
+    const fs=Fac.facturas.filter(f=>f.fecha>=d1&&f.fecha<=d2)
+      .filter(f=>!facTipo||(facTipo==="R"?f.tipo[0]==="R":facTipo==="anul"?f.estado==="anulada":f.tipo===facTipo))
+      .filter(f=>!q||norm([f.num_serie,(f.destinatario||{}).nombre,(f.destinatario||{}).nif,f.lineas.map(l=>l.n).join(" ")].join(" ")).includes(q));
+    const vivas=Fac.facturas.filter(f=>f.fecha>=d1&&f.fecha<=d2&&facCuenta(f)), suma=k=>vivas.reduce((s,f)=>s+(+f[k]),0);
+    const pend=Fac.pendientes(), rech=Fac.rechazadas().length;
+    return `<div class="kpis">
+        <div class="card kpi"><small>Facturado</small><strong>${eur(suma("total"))}</strong><span class="d">${FAC_PER[facPer]}</span></div>
+        <div class="card kpi"><small>Base imponible</small><strong>${eur(suma("base"))}</strong></div>
+        <div class="card kpi"><small>IVA repercutido</small><strong>${eur(suma("cuota"))}</strong></div>
+        <div class="card kpi"><small>Documentos</small><strong>${vivas.length}</strong><span class="d">${vivas.filter(f=>f.tipo==="F2").length} tickets · ${vivas.filter(f=>f.tipo!=="F2").length} facturas</span></div>
+        <div class="card kpi"><small>Agencia Tributaria</small><strong style="color:${rech?"var(--critico)":pend?"var(--aviso)":"var(--ok)"}">${rech?`${rech} rechazada${rech>1?"s":""}`:pend?`${pend} en cola`:"Al día"}</strong><span class="d">${Fac.cfg.ultimo_envio?`último envío ${new Date(Fac.cfg.ultimo_envio).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}`:"sin envíos aún"}</span></div></div>
+      <div class="fac-filtros"><div class="seg-claro" role="group" aria-label="Periodo">${Object.entries(FAC_PER).map(([k,t])=>`<button data-fper="${k}" aria-pressed="${facPer===k}">${t}</button>`).join("")}</div>
+        <select class="campo" id="f-tipo" aria-label="Tipo"><option value="">Todos los tipos</option>${[["F2","Tickets"],["F1","Facturas completas"],["F3","Canjes de tickets"],["R","Rectificativas"],["anul","Anuladas"]].map(([k,t])=>`<option value="${k}" ${facTipo===k?"selected":""}>${t}</option>`).join("")}</select>
+        <input class="campo" id="q-fac" type="search" placeholder="Buscar número, cliente, NIF o producto…" value="${esc(facQ)}" aria-label="Buscar factura"></div>
+      <div class="tabla-wrap"><table class="datos fac-tabla"><thead><tr><th>Número</th><th>Fecha</th><th>Tipo</th><th>Cliente</th><th style="text-align:right">Base</th><th style="text-align:right">IVA</th><th style="text-align:right">Total</th><th>AEAT</th><th></th></tr></thead><tbody>
+      ${fs.slice(0,400).map(f=>{ const cj=f.tipo==="F2"&&Fac.canjeDe(f); return `<tr class="${f.estado==="anulada"?"fac-anulada":""}"><td><b>${esc(f.num_serie)}</b>${f.estado==="anulada"?`<br><small class="fac-rojo">Anulada</small>`:cj?`<br><small>Canjeada por ${esc(cj.num_serie)}</small>`:""}</td>
+        <td>${facFechaL(f.fecha)}<br><small>${f.creado?hhmm(new Date(f.creado).getTime()):""}</small></td><td>${facTipoPill(f)}</td><td>${f.destinatario?`${esc(f.destinatario.nombre)}<br><small>${esc(f.destinatario.nif)}</small>`:`<small>Consumidor final</small>`}</td>
+        <td style="text-align:right">${eur(f.base)}</td><td style="text-align:right">${eur(f.cuota)}</td><td style="text-align:right"><b>${eur(f.total)}</b></td><td>${facPill(f)}</td>
+        <td><button class="b-ui claro peq-ui" data-fver="${esc(f.id)}">Ver</button></td></tr>`; }).join("")||`<tr><td colspan="9" style="color:var(--tinta-3)">${Fac.facturas.length?"No hay facturas con este filtro.":"Todavía no hay facturas. Al cobrar la próxima mesa se emitirá su ticket."}</td></tr>`}
+      </tbody></table></div>${fs.length>400?`<p class="ayuda">Se muestran las 400 más recientes de ${fs.length}. Acota el periodo o busca para ver el resto.</p>`:""}`;
+  }
+  function facPendV(){
+    const ps=Fac.porFacturar();
+    return `<div class="card"><div class="p-cab" style="margin:0 0 10px"><div><h2 style="margin:0">Cuentas cobradas sin factura</h2><p class="ayuda" style="margin:4px 0 0">Las que se cobraron sin emitir ticket (por ejemplo, pagadas online desde la mesa o con la emisión automática apagada).</p></div>
+      ${ps.filter(c=>totalCuenta(c)<=3000).length>1?`<button class="b-ui rojo" data-femitir-todas>Emitir todos los tickets (${ps.filter(c=>totalCuenta(c)<=3000).length})</button>`:""}</div>
+      <div class="tabla-wrap" style="border:0"><table class="datos"><thead><tr><th>Cobrada</th><th>Dónde</th><th>Consumo</th><th>Pago</th><th style="text-align:right">Total</th><th></th></tr></thead><tbody>
+      ${ps.slice(0,200).map(c=>{ const tot=totalCuenta(c); return `<tr><td>${new Date(c.t).toLocaleDateString("es-ES")} ${hhmm(c.t)}</td><td><b>${lugarCuenta(c)}</b></td><td style="max-width:340px"><small>${(c.items||[]).filter(i=>+i.q>0).map(i=>`${i.q}× ${esc(i.n)}`).join(", ")}</small></td><td>${esc(c.forma||"—")}</td>
+        <td style="text-align:right"><b>${eur(tot)}</b></td><td><span class="acc-fila">${tot<=3000?`<button class="b-ui peq-ui" data-femitir-cuenta="${esc(c.id)}">Emitir ticket</button>`:""}<button class="b-ui claro peq-ui" data-fnueva data-cuenta="${esc(c.id)}">Factura completa</button></span></td></tr>`; }).join("")||`<tr><td colspan="6" style="color:var(--tinta-3)">Todo facturado. ${ico("check")}</td></tr>`}
+      </tbody></table></div></div>`;
+  }
+  const totalCuenta=c=>(c.items||[]).filter(i=>+i.q>0).reduce((s,i)=>s+Math.round(i.q*i.p*100)/100,0);
+  function facLibroV(){
+    const [d1,d2]=facRango(facPer), fs=Fac.facturas.filter(f=>f.fecha>=d1&&f.fecha<=d2&&facCuenta(f)), porIva={}, porMes={};
+    fs.forEach(f=>{ f.desglose.forEach(d=>{ const k=+d.iva, o=porIva[k]||(porIva[k]={base:0,cuota:0,total:0}); o.base+=+d.base; o.cuota+=+d.cuota; o.total+=+d.total; });
+      const m=f.fecha.slice(0,7), o=porMes[m]||(porMes[m]={n:0,base:0,cuota:0,total:0}); o.n++; o.base+=+f.base; o.cuota+=+f.cuota; o.total+=+f.total; });
+    const sum=k=>Object.values(porIva).reduce((s,o)=>s+o[k],0), MES=m=>{ const t=new Date(m+"-15").toLocaleDateString("es-ES",{month:"long",year:"numeric"}); return t[0].toUpperCase()+t.slice(1); };
+    return `<div class="fac-filtros"><div class="seg-claro" role="group" aria-label="Periodo">${Object.entries(FAC_PER).map(([k,t])=>`<button data-fper="${k}" aria-pressed="${facPer===k}">${t}</button>`).join("")}</div>
+        <button class="b-ui" data-fcsv>${ico("copy")}Exportar libro (CSV)</button></div>
+      <div class="rej"><div class="card c6"><h2>IVA repercutido por tipo</h2><p class="ayuda">${FAC_PER[facPer]} · ${facFechaL(d1==="0000-01-01"?(Fac.facturas.slice(-1)[0]||{}).fecha||fechaISO():d1)} a ${facFechaL(d2==="9999-12-31"?fechaISO():d2)}</p>
+        <div class="tabla-wrap" style="border:0"><table class="datos" style="min-width:0"><thead><tr><th>Tipo</th><th style="text-align:right">Base imponible</th><th style="text-align:right">Cuota</th><th style="text-align:right">Total</th></tr></thead><tbody>
+        ${Object.keys(porIva).sort((a,b)=>b-a).map(k=>`<tr><td><b>${facIVA(k)}</b></td><td style="text-align:right">${eur(porIva[k].base)}</td><td style="text-align:right">${eur(porIva[k].cuota)}</td><td style="text-align:right">${eur(porIva[k].total)}</td></tr>`).join("")||`<tr><td colspan="4" style="color:var(--tinta-3)">Sin facturas en este periodo.</td></tr>`}
+        ${Object.keys(porIva).length?`<tr class="fac-totfila"><td>Total</td><td style="text-align:right">${eur(sum("base"))}</td><td style="text-align:right">${eur(sum("cuota"))}</td><td style="text-align:right">${eur(sum("total"))}</td></tr>`:""}</tbody></table></div>
+        <p class="ayuda" style="margin:10px 0 0">Sirve de base para el modelo 303 (IVA trimestral). Incluye rectificativas y excluye las anuladas y los tickets canjeados por factura completa. Revísalo siempre con tu gestoría.</p></div>
+      <div class="card c6"><h2>Por meses</h2><div class="tabla-wrap" style="border:0"><table class="datos" style="min-width:0"><thead><tr><th>Mes</th><th style="text-align:right">Docs.</th><th style="text-align:right">Base</th><th style="text-align:right">IVA</th><th style="text-align:right">Total</th></tr></thead><tbody>
+        ${Object.keys(porMes).sort().reverse().map(m=>`<tr><td>${MES(m)}</td><td style="text-align:right">${porMes[m].n}</td><td style="text-align:right">${eur(porMes[m].base)}</td><td style="text-align:right">${eur(porMes[m].cuota)}</td><td style="text-align:right"><b>${eur(porMes[m].total)}</b></td></tr>`).join("")||`<tr><td colspan="5" style="color:var(--tinta-3)">—</td></tr>`}</tbody></table></div></div></div>`;
+  }
+  function facAeatV(){
+    const c=Fac.cfg, rech=Fac.rechazadas(), pend=Fac.pendientes(), demo=Store.modo!=="supa", F=id=>Fac.facturas.find(f=>f.id===id);
+    return `<div class="rej"><div class="card c4"><h2>${ico("shield")} Conexión con la AEAT</h2><dl class="fac-dl">
+        <dt>Entorno</dt><dd>${demo?"Demo (simulado)":c.entorno==="produccion"?"Producción":"Pruebas"}</dd>
+        <dt>Último envío</dt><dd>${c.ultimo_envio?new Date(c.ultimo_envio).toLocaleString("es-ES"):"—"}${c.ultimo_estado?` · ${esc(c.ultimo_estado)}`:""}</dd>
+        <dt>En cola</dt><dd>${pend}</dd><dt>Rechazados</dt><dd>${rech.length}</dd></dl>
+        ${c.ultimo_error?`<p class="fac-ver mal">${esc(c.ultimo_error)}</p>`:""}
+        <button class="b-ui rojo" data-fenviar style="width:100%;margin-top:10px">Enviar ahora lo pendiente</button>
+        <p class="ayuda" style="margin:10px 0 0">El envío es automático tras cada factura. La AEAT marca una espera entre envíos (normalmente 60 s); si no hay conexión, se reintenta solo y nada se pierde.</p></div>
+      <div class="card c8"><h2>Registros de facturación</h2>
+        ${rech.length?`<div class="aviso-ui" style="background:#fde8e6;border-color:#f3b7b0;color:#8a1c12">${rech.length} registro(s) rechazado(s) por la AEAT. Revisa el motivo; si no sabes corregirlo, escríbenos por Soporte.</div>`:""}
+        <div class="tabla-wrap" style="border:0"><table class="datos"><thead><tr><th>Factura</th><th>Registro</th><th>Generado</th><th>Huella</th><th>Estado</th><th>CSV / motivo</th></tr></thead><tbody>
+        ${Fac.regs.slice(0,150).map(r=>{ const [cl,tx]=FAC_AEAT[r.estado]||["",r.estado], f=F(r.factura_id); return `<tr><td>${f?`<button class="th-ord fac-link" data-fver="${esc(f.id)}">${esc(r.num_serie)}</button>`:esc(r.num_serie)}</td><td>${r.tipo==="alta"?"Alta":"Anulación"}</td>
+          <td><small>${esc(String(r.generado||"").replace("T"," ").slice(0,19))}</small></td><td><code class="fac-hash" title="${esc(r.huella)}">${esc(String(r.huella||"").slice(0,12))}…</code></td>
+          <td><span class="pill ${cl}">${demo&&r.estado==="correcto"?"Aceptado (simulado)":tx}</span>${r.intentos>1?`<br><small>${r.intentos} intentos</small>`:""}</td>
+          <td><small>${r.estado==="incorrecto"||r.estado==="aceptado_errores"?`${r.codigo?`[${esc(r.codigo)}] `:""}${esc(r.mensaje||"")}`:esc(r.csv||r.mensaje||"")}</small></td></tr>`; }).join("")||`<tr><td colspan="6" style="color:var(--tinta-3)">Aún no hay registros.</td></tr>`}
+        </tbody></table></div></div></div>`;
+  }
+  // --- Hojas: ver, nueva, canje, rectificar, anular ---
+  const facDestHTML=()=>`<fieldset class="fac-dest"><legend>Datos del cliente</legend><div class="form-aj">
+      <label>NIF / CIF<input id="fd-nif" data-fdest="nif" value="${esc(facDest.nif||"")}" maxlength="12" required autocapitalize="characters" spellcheck="false" aria-describedby="fd-nif-ok"><small id="fd-nif-ok" class="fac-nifok">${facDest.nif?facNifOk(facDest.nif)?"✓ NIF válido":"✗ Revisa la letra o el dígito de control":""}</small></label>
+      <label>Nombre o razón social<input data-fdest="nombre" value="${esc(facDest.nombre||"")}" maxlength="120" required></label>
+      <label style="grid-column:1/-1">Domicilio (calle, número, CP y municipio)<input data-fdest="domicilio" value="${esc(facDest.domicilio||"")}" maxlength="200" required></label>
+      <label>Correo (opcional)<input type="email" data-fdest="email" value="${esc(facDest.email||"")}" maxlength="120"></label></div></fieldset>`;
+  const facTotLin=()=>facLin.reduce((s,l)=>s+(facNum(l.q)>0&&facNum(l.p)>=0?Math.round(facNum(l.q)*facNum(l.p)*100)/100:0),0);
+  function hojaFacHTML(){
+    if(!hojaFac) return ""; const h=hojaFac, F=id=>Fac.facturas.find(f=>f.id===id); let cuerpo="", ancha=false;
+    if(h.t==="ver"){ const f=F(h.id); if(!f){ hojaFac=null; return ""; } ancha=true;
+      const alta=Fac.alta(f), an=Fac.anulReg(f), cj=Fac.canjeDe(f), rs=Fac.rectsDe(f), dep=rs.length||cj, puedeRect=f.estado==="emitida"&&["F1","F2","F3"].includes(f.tipo)&&!cj;
+      const est=(r,t)=>r?`<div class="fac-reg"><b>${t}</b> ${(()=>{ const [c,x]=FAC_AEAT[r.estado]||["",r.estado]; return `<span class="pill ${c}">${Store.modo!=="supa"&&r.estado==="correcto"?"Aceptado (simulado)":x}</span>`; })()}
+        ${r.csv?`<small>CSV ${esc(r.csv)}</small>`:""}${r.estado==="incorrecto"||r.estado==="aceptado_errores"?`<small class="fac-rojo">${r.codigo?`[${esc(r.codigo)}] `:""}${esc(r.mensaje||"")}</small>`:""}
+        <small>Generado ${esc(String(r.generado||"").replace("T"," ").slice(0,19))}</small><small>Huella <code class="fac-hash" title="${esc(r.huella)}">${esc(String(r.huella||"").slice(0,20))}…</code></small>
+        <small>${r.anterior_huella?`Encadenado a <code class="fac-hash">${esc(r.anterior_huella.slice(0,12))}…</code>`:"Primer registro de la cadena"}</small></div>`:"";
+      cuerpo=`<div class="fac-ver-hoja"><div class="fac-papel ${["F2","R5"].includes(f.tipo)?"tk":""}">${facDocHTML(f)}</div>
+        <aside class="fac-lado"><h3>${esc(f.num_serie)}</h3><p style="margin:0">${facTipoPill(f)} ${f.estado==="anulada"?`<span class="pill critico">Anulada</span>`:""}</p>
+          ${est(alta,"Alta")}${est(an,"Anulación")}
+          ${f.estado==="anulada"&&f.anulada_motivo?`<p class="ayuda">Motivo de anulación: ${esc(f.anulada_motivo)}</p>`:""}
+          ${cj?`<p class="ayuda">Canjeada por <button class="th-ord fac-link" data-fver="${esc(cj.id)}">${esc(cj.num_serie)}</button></p>`:""}
+          ${rs.length?`<p class="ayuda">Rectificada por ${rs.map(r=>`<button class="th-ord fac-link" data-fver="${esc(r.id)}">${esc(r.num_serie)}</button> (${eur(r.total)})`).join(", ")}</p>`:""}
+          <div class="fac-acc"><button class="b-ui rojo" data-fimprimir="${esc(f.id)}">${ico("print")}Imprimir o guardar PDF</button>
+            <button class="b-ui claro" data-fcopiar-qr="${esc(f.id)}">${ico("copy")}Copiar enlace de verificación</button>
+            ${f.tipo==="F2"&&f.estado==="emitida"&&!dep?`<button class="b-ui claro" data-fcanje="${esc(f.id)}">Canjear por factura completa</button>`:""}
+            ${puedeRect?`<button class="b-ui claro" data-frect="${esc(f.id)}">Devolución o rectificación</button>`:""}
+            ${f.estado==="emitida"&&!dep?`<button class="b-ui claro fac-rojo" data-fanular="${esc(f.id)}">Anular (emitida por error)</button>`:""}</div></aside></div>`; }
+    else if(h.t==="nueva"){ const cu=h.cuenta&&Store.get("cuentas",h.cuenta);
+      cuerpo=`<h3>Factura completa</h3><p class="ayuda" style="margin:0">Con los datos fiscales del cliente (empresa o autónomo que la necesita para deducir el IVA).</p>
+        <form id="f-fac-nueva" class="fac-form" autocomplete="off" novalidate>${facDestHTML()}
+        <fieldset><legend>Conceptos ${cu?`· ${lugarCuenta(cu)}, cobrada ${hhmm(cu.t)}`:""}</legend>
+        ${cu?`<ul class="fac-lineas-ro">${(cu.items||[]).filter(i=>+i.q>0).map(i=>`<li><span>${i.q}× ${esc(i.n)}</span><b>${eur(i.q*i.p)}</b></li>`).join("")}</ul>`
+          :`<div class="fac-lineas"><div class="fac-lin fac-lin-cab"><span>Concepto</span><span>Cant.</span><span>Precio (IVA incl.)</span><span>IVA</span><span></span></div>${facLin.map((l,i)=>`<div class="fac-lin" data-fl="${i}">
+            <input data-k="n" value="${esc(l.n)}" maxlength="120" placeholder="Menú de grupo" aria-label="Concepto"><input data-k="q" value="${esc(l.q)}" inputmode="decimal" aria-label="Cantidad">
+            <input data-k="p" value="${esc(l.p)}" inputmode="decimal" placeholder="0,00" aria-label="Precio con IVA"><select data-k="iva" aria-label="IVA">${FAC_IVAS.map(v=>`<option value="${v}" ${+l.iva===v?"selected":""}>${v} %</option>`).join("")}</select>
+            <button type="button" class="b-ui claro peq-ui" data-fdel-lin="${i}" aria-label="Quitar línea" ${facLin.length<2?"disabled":""}>✕</button></div>`).join("")}</div>
+            <button type="button" class="b-ui claro peq-ui" data-fadd-lin style="margin-top:6px">+ Añadir línea</button>`}</fieldset>
+        <div class="form-aj"><label>Forma de pago<select id="fn-forma">${["","tarjeta","efectivo","transferencia","bizum","online"].map(x=>`<option value="${x}" ${(cu&&cu.forma===x)?"selected":""}>${x||"—"}</option>`).join("")}</select></label>
+          <label>Observaciones (opcional)<input id="fn-desc" maxlength="300" placeholder="Comida de empresa del 24/11"></label></div>
+        <div class="fac-pie-form"><span>Total <b id="fac-prev">${eur(cu?totalCuenta(cu):facTotLin())}</b></span><button class="b-ui rojo" type="submit">Emitir factura</button></div></form>`; }
+    else if(h.t==="canje"){ const ts=(h.ids||[]).map(F).filter(Boolean);
+      cuerpo=`<h3>Canjear ticket por factura completa</h3><p class="ayuda" style="margin:0">Se emite una factura completa que sustituye al ticket ${ts.map(t=>esc(t.num_serie)).join(", ")} (${eur(ts.reduce((s,t)=>s+(+t.total),0))}). El ticket queda registrado como canjeado.</p>
+        <form id="f-fac-canje" class="fac-form" autocomplete="off" novalidate>${facDestHTML()}<div class="fac-pie-form"><span></span><button class="b-ui rojo" type="submit">Emitir factura completa</button></div></form>`; }
+    else if(h.t==="rect"){ const f=F(h.id); if(!f){ hojaFac=null; return ""; } const ya=Fac.rectsDe(f).reduce((s,r)=>s-r.total,0);
+      cuerpo=`<h3>Devolución o rectificación · ${esc(f.num_serie)}</h3><p class="ayuda" style="margin:0">Se emite una factura rectificativa ${f.tipo==="F2"?"(R5)":"(R1)"} con importe negativo. La original no se toca.${ya?` Ya rectificado: ${eur(ya)} de ${eur(f.total)}.`:""}</p>
+        <form id="f-fac-rect" class="fac-form" autocomplete="off" novalidate>
+          <label class="check-l"><input type="checkbox" id="fr-todo" ${h.todo?"checked":""} ${ya?"disabled":""}> Devolver la factura entera (${eur(f.total)})</label>
+          <div class="fac-lineas ${h.todo?"fac-off":""}"><div class="fac-lin fac-lin-r fac-lin-cab"><span>Concepto</span><span>Facturado</span><span>A devolver</span><span>Importe</span></div>${f.lineas.map((l,i)=>`<div class="fac-lin fac-lin-r"><span>${esc(l.n)}</span><span>${fmtCant(l.q)} × ${eur(l.p)}</span>
+            <input data-rq="${i}" value="${esc((h.q||{})[i]??"")}" inputmode="decimal" placeholder="0" aria-label="Unidades a devolver de ${esc(l.n)}" ${h.todo?"disabled":""}><span data-rimp="${i}">${eur((facNum((h.q||{})[i])||0)*l.p)}</span></div>`).join("")}</div>
+          <label>Motivo<input id="fr-motivo" maxlength="300" required placeholder="Producto no servido, error en el precio…" value="${esc(h.motivo||"")}"></label>
+          <div class="fac-pie-form"><span>A devolver <b id="fac-prev">${eur(h.todo?f.total:f.lineas.reduce((s,l,i)=>s+(facNum((h.q||{})[i])||0)*l.p,0))}</b></span><button class="b-ui rojo" type="submit">Emitir rectificativa</button></div></form>`; }
+    else if(h.t==="anular"){ const f=F(h.id); if(!f){ hojaFac=null; return ""; }
+      cuerpo=`<h3>Anular ${esc(f.num_serie)}</h3><div class="aviso-ui" style="background:#fde8e6;border-color:#f3b7b0;color:#8a1c12">Solo para facturas que <b>no debieron emitirse</b> (duplicada, de prueba, cliente equivocado). Si el cliente devuelve algo o hay que cambiar un importe, usa «Devolución o rectificación».</div>
+        <p class="ayuda" style="margin:0">Se envía un registro de anulación a la AEAT. La factura no desaparece: queda marcada como anulada.</p>
+        <form id="f-fac-anular" class="fac-form" autocomplete="off" novalidate><label>Motivo<input id="fa-motivo" maxlength="300" required placeholder="Emitida dos veces por error"></label>
+          <label class="check-l"><input type="checkbox" id="fa-ok" required> Confirmo que esta factura se emitió por error</label>
+          <div class="fac-pie-form"><span></span><button class="b-ui rojo" type="submit">Anular factura</button></div></form>`; }
+    return `<div class="hoja-fondo" data-cerrar data-fcerrar-fondo><div class="hoja ui hoja-neg ${ancha?"hoja-fac":"hoja-ancha"}" role="dialog" aria-modal="true" aria-label="Facturación"><div class="asa"></div><button class="fac-x" data-fcerrar aria-label="Cerrar">✕</button>${cuerpo}</div></div>`;
+  }
+  function facLeerForm(){
+    const fm=app.querySelector("#f-fac-nueva,#f-fac-canje,#f-fac-rect"); if(!fm) return;
+    fm.querySelectorAll("[data-fdest]").forEach(i=>facDest[i.dataset.fdest]=i.value);
+    fm.querySelectorAll("[data-fl]").forEach(row=>{ const i=+row.dataset.fl; if(!facLin[i]) return; row.querySelectorAll("[data-k]").forEach(x=>facLin[i][x.dataset.k]=x.value); });
+    if(hojaFac&&hojaFac.t==="rect"){ hojaFac.q={}; fm.querySelectorAll("[data-rq]").forEach(x=>hojaFac.q[x.dataset.rq]=x.value); const m=fm.querySelector("#fr-motivo"); if(m) hojaFac.motivo=m.value; }
+  }
+  function entradaFac(e){
+    const fm=e.target.closest("#f-fac-nueva,#f-fac-canje,#f-fac-rect"); if(!fm) return; facLeerForm();
+    if(e.target.dataset.fdest==="nif"){ const o=app.querySelector("#fd-nif-ok"); if(o) o.textContent=e.target.value?facNifOk(e.target.value)?"✓ NIF válido":"✗ Revisa la letra o el dígito de control":""; }
+    const p=app.querySelector("#fac-prev"); if(!p) return;
+    if(fm.id==="f-fac-nueva"&&!hojaFac.cuenta) p.textContent=eur(facTotLin());
+    if(fm.id==="f-fac-rect"){ const f=Fac.facturas.find(x=>x.id===hojaFac.id); let t=0; f.lineas.forEach((l,i)=>{ const q=Math.max(0,facNum(hojaFac.q[i])||0), v=q*l.p; t+=v; const s=app.querySelector(`[data-rimp="${i}"]`); if(s) s.textContent=eur(v); }); p.textContent=eur(t); }
+  }
+  async function facOp(fn, ok){ if(facOcupado) return; facOcupado=true; const b=app.querySelector(".hoja-fac [type=submit],.hoja-neg [type=submit]"); if(b){ b.disabled=true; b.textContent="Un momento…"; }
+    try{ const r=await fn(); facBorr={}; if(ok) ok(r); }catch(e){ toast(facError(e)); } finally{ facOcupado=false; pintar(true); } }
+  function facCSV(){
+    const [d1,d2]=facRango(facPer), q=v=>`"${String(v??"").replace(/^([=+\-@\t\r])/,"'$1").replace(/"/g,'""')}"`, n=v=>fac2(v).replace(".",","), F=id=>Fac.facturas.find(f=>f.id===id);
+    const cab=["Ejercicio","Periodo","Fecha expedición","Serie y número","Tipo de factura","Estado","NIF destinatario","Nombre destinatario","Tipo IVA %","Base imponible","Cuota IVA","Total","Factura rectificada o sustituida","Estado AEAT","CSV AEAT","Huella"];
+    const filas=Fac.facturas.filter(f=>f.fecha>=d1&&f.fecha<=d2).slice().reverse().flatMap(f=>{ const r=Fac.alta(f)||{}, ref=f.rectifica?(F(f.rectifica)||{}).num_serie:(f.sustituye||[]).map(id=>(F(id)||{}).num_serie).join(" ");
+      return f.desglose.map(d=>[f.anio,f.fecha.slice(5,7),facFechaL(f.fecha),q(f.num_serie),f.tipo,f.estado==="anulada"?"Anulada":f.tipo==="F2"&&Fac.canjeDe(f)?"Canjeada":"Emitida",q((f.destinatario||{}).nif||""),q((f.destinatario||{}).nombre||""),n(d.iva),n(d.base),n(d.cuota),n(d.total),q(ref||""),q(Fac.estadoAeat(f)),q(r.csv||""),q(r.huella||"")].join(";")); });
+    const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob(["﻿"+[cab.join(";"),...filas].join("\n")],{type:"text/csv;charset=utf-8"}));
+    a.download=`libro-facturas-expedidas-${TENANT}-${d1==="0000-01-01"?"completo":d1+"_"+d2}.csv`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    toast(`Libro exportado: ${filas.length} líneas.`);
+  }
+  async function clicFac(t){
+    if(t.closest("[data-fcerrar]")||t.matches("[data-fcerrar-fondo]")){ hojaFac=null; facBorr={}; return pintar(true),true; }
+    if(t.closest("[data-fver],[data-fnueva],[data-fcanje],[data-frect],[data-fanular]")) facBorr={};
+    const s=t.closest("[data-fsub]"); if(s){ facSub=s.dataset.fsub; facBorr={}; return pintar(true),true; }
+    const p=t.closest("[data-fper]"); if(p){ facPer=p.dataset.fper; return pintar(true),true; }
+    if(t.closest("[data-frecargar]")){ Fac.reset(); return pintar(true),true; }
+    const v=t.closest("[data-fver]"); if(v){ hojaFac={t:"ver",id:v.dataset.fver}; return pintar(true),true; }
+    const nu=t.closest("[data-fnueva]"); if(nu){ facDest={}; facLin=[{n:"",q:"1",p:"",iva:String(Fac.cfg?Fac.cfg.iva_defecto:10)}]; hojaFac={t:"nueva",cuenta:nu.dataset.cuenta||null}; return pintar(true),true; }
+    if(t.closest("[data-fadd-lin]")){ facLeerForm(); facLin.push({n:"",q:"1",p:"",iva:String(Fac.cfg?Fac.cfg.iva_defecto:10)}); pintar(true); app.querySelector(`[data-fl="${facLin.length-1}"] [data-k="n"]`)?.focus(); return true; }
+    const dl=t.closest("[data-fdel-lin]"); if(dl){ facLeerForm(); facLin.splice(+dl.dataset.fdelLin,1); return pintar(true),true; }
+    const cj=t.closest("[data-fcanje]"); if(cj){ facDest={}; hojaFac={t:"canje",ids:[cj.dataset.fcanje]}; return pintar(true),true; }
+    const rc=t.closest("[data-frect]"); if(rc){ hojaFac={t:"rect",id:rc.dataset.frect,q:{},todo:false}; return pintar(true),true; }
+    if(t.id==="fr-todo"){ facLeerForm(); hojaFac.todo=t.checked; return pintar(true),true; }
+    const an=t.closest("[data-fanular]"); if(an){ hojaFac={t:"anular",id:an.dataset.fanular}; return pintar(true),true; }
+    const im=t.closest("[data-fimprimir]"); if(im){ const f=Fac.facturas.find(x=>x.id===im.dataset.fimprimir); if(f) facImprimir(f); return true; }
+    const cq=t.closest("[data-fcopiar-qr]"); if(cq){ const f=Fac.facturas.find(x=>x.id===cq.dataset.fcopiarQr); try{ await navigator.clipboard.writeText(facUrlQR(f)); toast("Enlace de verificación copiado."); }catch(_){ toast("No se ha podido copiar."); } return true; }
+    const ec=t.closest("[data-femitir-cuenta]"); if(ec){ await facOp(()=>Fac.emitir({tipo:"F2",cuenta:ec.dataset.femitirCuenta}),f=>toast(`Ticket ${f.num_serie} emitido.`)); return true; }
+    if(t.closest("[data-femitir-todas]")){ const ps=Fac.porFacturar().filter(c=>totalCuenta(c)<=3000).reverse(); let n=0;
+      await facOp(async()=>{ for(const c of ps){ await Fac.emitir({tipo:"F2",cuenta:c.id}); n++; } },()=>{}); toast(n===ps.length?`${n} tickets emitidos.`:`${n} de ${ps.length} tickets emitidos.`); return true; }
+    if(t.closest("[data-fenviar]")){ await Fac.enviar(true); return pintar(true),true; }
+    if(t.closest("[data-fverificar]")){ try{ facVer=await Fac.verificar(); }catch(e){ toast(facError(e)); } return pintar(true),true; }
+    if(t.closest("[data-fcsv]")){ facCSV(); return true; }
+    return false;
+  }
+  async function enviarFac(f){
+    const v=id=>f.querySelector(id)?.value??"";
+    if(f.id==="f-fac-cfg"){
+      const c={nif:v("#fc-nif").toUpperCase().replace(/[^0-9A-Z]/g,""),razon:v("#fc-razon").trim(),nombre_comercial:v("#fc-com").trim(),domicilio:v("#fc-dom").trim(),cp:v("#fc-cp").trim(),municipio:v("#fc-mun").trim(),provincia:v("#fc-prov").trim(),
+        iva_defecto:+v("#fc-iva"),serie_t:v("#fc-st").trim().toUpperCase(),serie_f:v("#fc-sf").trim().toUpperCase(),serie_r:v("#fc-sr").trim().toUpperCase(),
+        ticket_auto:f.querySelector("#fc-auto").checked,imprimir_auto:f.querySelector("#fc-imp").checked,pie:v("#fc-pie").trim(),entorno:Fac.cfg?Fac.cfg.entorno:"pruebas"};
+      if(!facNifOk(c.nif)) return toast("Revisa el NIF: la letra o el dígito de control no cuadran."),true;
+      if(!c.razon||!c.domicilio||!c.municipio) return toast("Completa razón social, domicilio y municipio."),true;
+      if(!/^\d{5}$/.test(c.cp)) return toast("El código postal tiene 5 cifras."),true;
+      if([c.serie_t,c.serie_f,c.serie_r].some(x=>!/^[A-Z0-9]{1,4}$/.test(x))) return toast("Las series son de 1 a 4 letras o números."),true;
+      if(new Set([c.serie_t,c.serie_f,c.serie_r]).size<3) return toast("Las tres series tienen que ser distintas."),true;
+      const nuevo=!Fac.cfg; await facOp(async()=>{ await Fac.guardarCfg(c); await Fac.cargar(); },()=>{ toast(nuevo?"Facturación activada: desde ahora cada cobro emite su ticket.":"Datos fiscales guardados."); if(nuevo) facSub="facturas"; }); return true; }
+    if(f.id==="f-fac-nueva"||f.id==="f-fac-canje"){
+      facLeerForm(); const d={nif:String(facDest.nif||"").toUpperCase().replace(/[^0-9A-Z]/g,""),nombre:String(facDest.nombre||"").trim(),domicilio:String(facDest.domicilio||"").trim(),email:String(facDest.email||"").trim()};
+      if(!facNifOk(d.nif)) return toast("El NIF del cliente no es válido. Revisa la letra o el dígito de control."),true;
+      if(!d.nombre||!d.domicilio) return toast("Faltan el nombre y el domicilio del cliente."),true;
+      let o;
+      if(f.id==="f-fac-canje") o={tipo:"F3",sustituye:hojaFac.ids,dest:d};
+      else { o={tipo:"F1",dest:d,desc:v("#fn-desc").trim(),forma:v("#fn-forma")||null};
+        if(hojaFac.cuenta) o.cuenta=hojaFac.cuenta;
+        else { const ls=facLin.filter(l=>String(l.n).trim()||String(l.p).trim()); if(!ls.length) return toast("Añade al menos un concepto."),true;
+          if(ls.some(l=>!String(l.n).trim()||!(facNum(l.q)>0)||!(facNum(l.p)>=0))) return toast("Revisa los conceptos: cada línea necesita concepto, cantidad y precio."),true;
+          o.lineas=ls.map(l=>({n:String(l.n).trim(),q:facNum(l.q),p:facNum(l.p),iva:+l.iva})); } }
+      await facOp(()=>Fac.emitir(o),fa=>{ hojaFac={t:"ver",id:fa.id}; toast(`Factura ${fa.num_serie} emitida.`); }); return true; }
+    if(f.id==="f-fac-rect"){
+      facLeerForm(); const o=Fac.facturas.find(x=>x.id===hojaFac.id), motivo=v("#fr-motivo").trim(); if(motivo.length<3) return toast("Escribe el motivo de la rectificación."),true;
+      let ls=null;
+      if(!hojaFac.todo){ ls=o.lineas.map((l,i)=>({n:l.n,q:Math.max(0,facNum(hojaFac.q[i])||0),p:l.p,iva:l.iva,max:l.q})).filter(l=>l.q>0);
+        if(!ls.length) return toast("Indica qué unidades se devuelven, o marca «Devolver la factura entera»."),true;
+        if(ls.some(l=>l.q>l.max)) return toast("No se pueden devolver más unidades de las facturadas."),true; ls=ls.map(({max,...l})=>l); }
+      await facOp(()=>Fac.rectificar(o.id,ls,motivo),fa=>{ hojaFac={t:"ver",id:fa.id}; toast(`Rectificativa ${fa.num_serie} emitida (${eur(fa.total)}).`); }); return true; }
+    if(f.id==="f-fac-anular"){
+      const motivo=v("#fa-motivo").trim(); if(motivo.length<3) return toast("Escribe el motivo de la anulación."),true; if(!f.querySelector("#fa-ok").checked) return toast("Marca la casilla de confirmación."),true;
+      const id=hojaFac.id; await facOp(()=>Fac.anular(id,motivo),fa=>{ hojaFac={t:"ver",id:fa.id}; toast(`${fa.num_serie} anulada. Se envía el registro de anulación a la AEAT.`); }); return true; }
+    return false;
+  }
+  async function cambioFac(t){
+    if(t.id==="f-tipo"){ facTipo=t.value; return pintar(true),true; }
+    if(t.closest("#f-fac-nueva,#f-fac-canje,#f-fac-rect")&&t.tagName==="SELECT"){ facLeerForm(); return true; }
+    return false;
+  }
+  function facRefresco(){ clearTimeout(facPoll); if(panelTab==="facturacion" && Fac.cargado && Fac.pendientes()>0) facPoll=setTimeout(()=>{ if(panelTab==="facturacion") Fac.enviar(); },20000); }
   // Tarjetas extra de la sala en vivo: avisos de stock y reservas de hoy
   function salaExtra(){
     const al=alertasStock().filter(x=>x.e!=="exceso"), hoy=reservasDe(fechaISO()).filter(r=>["pendiente","confirmada"].includes(r.estado)), s=stocks();
@@ -2983,27 +3546,29 @@ function VPanel(){
   function pintar(forzar){
     const ae=document.activeElement, escribiendo=ae&&ae.id==="chat-txt"?ae.value:null;
     if(!forzar && escribiendo===null && ae && app.contains(ae) && ae.matches("input:not([type=checkbox]),textarea,select")) return;
+    if(hojaFac||panelTab==="facturacion"){ facLeerForm(); facGuardarBorr(); }
     const sinLeer=Store.all("chat").filter(m=>m.de==="soporte"&&!m.leido).length, ent=entrantes().length;
     const resPend=Store.all("reservas").filter(r=>r.estado==="pendiente").length, alStock=alertasStock().filter(x=>x.e!=="exceso").length;
     const adm=Acceso.admin(); admAntes=adm;
     if(!adm && !SERVICIO_TABS.includes(panelTab)) panelTab="sala";
     const nAgot=Object.values(cfgCarta().agotados||{}).filter(Boolean).length;
     const grupos=[["Servicio",[["sala","Sala en vivo","live",ent],["pedidos","Pedidos","receipt"],["reservas","Reservas","calendar",resPend],["agotados","Agotados","plate",nAgot],["temporal","Fuera de carta","chef",cfgTemp().filter(tempVigente).length],["turno","Turno","users"]]],
-      ...(adm?[["Negocio",[["economia","Economía y caja","euro"],["inventario","Inventario","box",alStock],["compras","Compras y proveedores","truck"],["resumen","Resumen","chart"],["rendimiento","Camareros","users"],["informe","Informe","mail"]]],
+      ...(adm?[["Negocio",[["economia","Economía y caja","euro"],["inventario","Inventario","box",alStock],["compras","Compras y proveedores","truck"],["facturacion","Facturación","receipt",Fac.cargado?Fac.rechazadas().length+Fac.porFacturar().length:0],["resumen","Resumen","chart"],["rendimiento","Camareros","users"],["informe","Informe","mail"]]],
       ["Configuración",[["carta","Carta","menu"],["menu","Menú del día","plate"],["nfc","Tarjetas NFC","nfc"],["ajustes","Marca y ajustes","gear"],["reglas","Reglas","check"],["equipo","Equipo y accesos","lock"]]],
       ["Ayuda",[["soporte","Soporte","chat",sinLeer],...(Store.modo==="supa"?[["cuenta","Mi cuenta","door"]]:[])]]]:[])];
-    const cuerpo={sala,agotados:agotadosV,temporal:temporalV,pedidos:pedidosV,reservas:reservasV,economia:economiaV,inventario:inventarioV,compras:comprasV,resumen:resumenV,rendimiento:rendimientoV,informe,carta:cartaV,menu:menuV,turno:turnoV,nfc:nfcV,ajustes:ajustesV,reglas:reglasV,equipo:equipoV,soporte:soporteV,cuenta:cuentaV}[panelTab]();
+    const cuerpo={sala,agotados:agotadosV,temporal:temporalV,pedidos:pedidosV,reservas:reservasV,economia:economiaV,inventario:inventarioV,compras:comprasV,facturacion:facturacionV,resumen:resumenV,rendimiento:rendimientoV,informe,carta:cartaV,menu:menuV,turno:turnoV,nfc:nfcV,ajustes:ajustesV,reglas:reglasV,equipo:equipoV,soporte:soporteV,cuenta:cuentaV}[panelTab]();
     app.innerHTML=`<div class="panel"><aside class="p-side"><div class="marca"><b>${esc(cfgBar().nombre)}</b><span>${adm?"panel · administración":"panel · servicio"}</span></div>
       ${adm?`<div class="adm-on"><span>${ico("lock")} Administración abierta</span><button data-admin-cerrar>Cerrar</button></div>`:""}
       <nav aria-label="Secciones del panel">${grupos.map(([g,ts])=>`<span class="grupo">${g}</span>${ts.map(([k,t,i,b])=>`<button data-tab="${k}" aria-current="${panelTab===k?"page":"false"}">${ico(i)}${t}${b?`<span class="b">${b}</span>`:""}</button>`).join("")}`).join("")}</nav>
       ${adm?"":`<button class="adm-btn" data-admin-abrir>${ico("lock")} Administración</button>`}
       <div class="abajo"><a href="#inicio">← Todas las pantallas</a>${adm&&(Store.modo!=="supa"||Store.rol==="super")?`<a href="#admin">Panel maestro ${PLATAFORMA}</a>`:""}${Store.sesion?`<button class="b-ui claro" data-salir style="font-size:13px">Cerrar sesión (${esc(Store.sesion.user.email)})</button>`:`<button class="b-ui claro" data-salir-local style="font-size:13px">${ico("door")}Salir del local</button>`}${adm?`<button class="b-ui claro" data-cerrar-dia style="font-size:13px">Cerrar el día</button><button class="b-ui claro" data-reiniciar style="font-size:13px">Borrar datos de prueba</button>`:""}<span>Funciona con ${PLATAFORMA}</span></div></aside>
-      <main class="p-main">${cuerpo}</main>${hoja?hojaMesaHTML(hoja,"panel"):""}${hojaNegHTML()}${hojaAdminHTML()}</div>`;
+      <main class="p-main">${cuerpo}</main>${hoja?hojaMesaHTML(hoja,"panel"):""}${hojaNegHTML()}${hojaFacHTML()}${hojaAdminHTML()}</div>`;
     if(pideAdmin) app.querySelector(Store.modo==="supa"?"#adm-email":"#adm-clave")?.focus();
     app.querySelectorAll(".graf").forEach(tip);
-    for(const [sel,set] of [["#q-ped",x=>qPed=x],["#q-inv",x=>qInv=x]]){ const i=app.querySelector(sel); if(i) i.addEventListener("input",()=>{ set(i.value); const pos=i.selectionStart; pintar(true); const n=app.querySelector(sel); n.focus(); n.setSelectionRange(pos,pos); }); }
+    for(const [sel,set] of [["#q-ped",x=>qPed=x],["#q-inv",x=>qInv=x],["#q-fac",x=>facQ=x]]){ const i=app.querySelector(sel); if(i) i.addEventListener("input",()=>{ set(i.value); const pos=i.selectionStart; pintar(true); const n=app.querySelector(sel); n.focus(); n.setSelectionRange(pos,pos); }); }
     const bc=app.querySelector("#bc"); if(bc) bc.addEventListener("input",()=>{ buscar=bc.value; const pos=bc.selectionStart; pintar(true); const n=app.querySelector("#bc"); n.focus(); n.setSelectionRange(pos,pos); });
     if(escribiendo!==null){ const i=app.querySelector("#chat-txt"); if(i){ i.value=escribiendo; i.focus(); } }
+    facPonerBorr(); facRefresco();
     if(panelTab==="soporte"){ const l=app.querySelector("#chat-lista"); if(l) l.scrollTop=l.scrollHeight;
       Store.all("chat").filter(m=>m.de==="soporte"&&!m.leido).forEach(m=>Store.set("chat",m.id,{...m,leido:true})); }
   }
@@ -3017,7 +3582,7 @@ function VPanel(){
       Acceso.cerrarAdmin(); panelTab="sala"; toast("Administración cerrada."); return pintar(true); }
     if(t.closest("[data-salir-local]")){ Acceso.salir(); toast("Sesión del local cerrada en este dispositivo."); return reiniciarVista(); }
     { const tb=t.closest("[data-tab]"); if(tb && !SERVICIO_TABS.includes(tb.dataset.tab) && !Acceso.admin()){ pideAdmin={tab:tb.dataset.tab}; errAdmin=""; return pintar(true); } }
-    if(t.closest("[data-cerrar-b]")||t.matches("[data-cerrar]")){ hoja=null; editPlato=null; hojaNeg=null; return pintar(true); }
+    if(t.closest("[data-cerrar-b]")||t.matches("[data-cerrar]")){ hoja=null; editPlato=null; hojaNeg=null; hojaFac=null; facBorr={}; return pintar(true); }
     if(await clicValidar(t,"encargado")) return;
     if(await clicNeg(t)) return;
     if(t.closest("[data-add-rec]")){ app.querySelector("#ep-receta").insertAdjacentHTML("beforeend",filaReceta()); return; }
@@ -3146,8 +3711,8 @@ function VPanel(){
         if(data==="no_existe") return toast("No hay ninguna cuenta con ese correo. Pide a soporte que la cree.");
         toast(`${email} ya tiene acceso como ${ROLES[rol]}.`); equipo=null; return pintar(true); }catch(_){ toast("No se ha podido dar acceso."); } }
   }
-  app.addEventListener("click",clic); app.addEventListener("change",cambio); app.addEventListener("submit",enviar);
-  return { titulo:"Panel · "+cfgBar().nombre, pintar:()=>pintar(), salir(){ app.removeEventListener("click",clic); app.removeEventListener("change",cambio); app.removeEventListener("submit",enviar); },
+  app.addEventListener("click",clic); app.addEventListener("change",cambio); app.addEventListener("submit",enviar); app.addEventListener("input",entradaFac);
+  return { titulo:"Panel · "+cfgBar().nombre, pintar:()=>pintar(), salir(){ app.removeEventListener("click",clic); app.removeEventListener("change",cambio); app.removeEventListener("submit",enviar); app.removeEventListener("input",entradaFac); clearTimeout(facPoll); Fac.onCambio=null; },
     tic(){ if(admAntes && !Acceso.admin()){ admAntes=false; pideAdmin=null; toast("Administración cerrada por inactividad."); return pintar(true); }
       if(panelTab==="sala"&&!hoja){ const n=avisosAbiertos().filter(escalado).length; if(this._s!==undefined && this._s!==n) pintar(); this._s=n; } } };
 }

@@ -825,6 +825,50 @@ body.cx-abierta{overflow:hidden}
 @media (prefers-reduced-motion:reduce){.arranque i{animation-duration:2.4s}}
 /* La hoja recibe el foco al abrirse (lector de pantalla y teclado): sin marco alrededor de toda la hoja */
 [role="dialog"]:focus{outline:none}
+/* ===== Facturación y VERI*FACTU ===== */
+.fac-subs{margin-bottom:14px;flex-wrap:wrap}.fac-subs .b{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;margin-left:4px;border-radius:10px;background:var(--critico);color:#fff;font-size:12px;font-weight:800}
+.fac-filtros{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}.fac-filtros .campo{min-height:42px}.fac-filtros #q-fac{flex:1;min-width:220px}
+.fac-tabla td small{color:var(--tinta-3)}tr.fac-anulada td{color:var(--tinta-3)}tr.fac-anulada td b{text-decoration:line-through}
+.pill.fac-t-F{color:var(--azul)}.pill.fac-t-R{color:#7a3db8}.fac-rojo{color:var(--critico)!important}
+.fac-link{background:none;border:0;padding:0;color:var(--azul);font-weight:700;text-decoration:underline;cursor:pointer;font-size:inherit}
+.fac-hash{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#f4f1ea;border-radius:6px;padding:1px 5px}
+.fac-dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:8px 0 0;font-size:14px}.fac-dl dt{color:var(--tinta-3);font-weight:700}.fac-dl dd{margin:0}
+.fac-ver{margin:10px 0 0;padding:8px 10px;border-radius:10px;font-size:14px;font-weight:600}.fac-ver.bien{background:#e7f4e8;color:#1f5f22}.fac-ver.mal{background:#fde8e6;color:#8a1c12}
+.fac-intro h2{display:flex;gap:8px;align-items:center}.fac-pasos{margin:8px 0 12px;padding-left:18px;display:grid;gap:8px;font-size:15px}
+.fac-totfila td{font-weight:800;border-top:2px solid var(--tinta)}
+.hoja.hoja-fac{max-width:1120px;width:100%;position:relative}.hoja-neg{position:relative}
+.fac-x{position:absolute;top:10px;right:12px;width:40px;height:40px;border-radius:50%;border:1.5px solid #e2d8c6;background:#fff;font-size:16px;cursor:pointer;z-index:2}
+.fac-ver-hoja{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+.fac-papel{background:#fff;border:1px solid #e2d8c6;border-radius:6px;box-shadow:0 6px 24px rgba(31,27,23,.12);padding:28px 30px;max-height:72vh;overflow:auto}
+.fac-papel.tk{display:flex;justify-content:center;padding:18px}
+.fac-lado{display:grid;gap:10px;align-content:start}.fac-lado h3{margin:0}
+.fac-reg .pill{justify-self:start}.fac-tabla td[style*="text-align:right"]{white-space:nowrap}
+.fac-reg{display:grid;gap:3px;padding:10px;border:1.5px solid #e2d8c6;border-radius:12px;background:#fffdf8;font-size:13px}.fac-reg b{font-size:14px}
+.fac-acc{display:grid;gap:8px}.fac-acc .b-ui{width:100%}
+.fac-form{display:grid;gap:12px}.fac-form fieldset{border:1.5px solid #e2d8c6;border-radius:14px;padding:10px 12px 12px;margin:0}
+.fac-form legend{font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--tinta-2);padding:0 6px}
+.fac-nifok{font-weight:600;text-transform:none;letter-spacing:0;color:var(--tinta-3)}
+.fac-lineas{display:grid;gap:6px}.fac-lin{display:grid;grid-template-columns:minmax(0,1fr) 70px 120px 84px 40px;gap:6px;align-items:center}
+.fac-lin input,.fac-lin select{border:1.5px solid #cfc3ad;border-radius:10px;padding:8px 9px;font-size:15px;background:#fff;min-width:0;font-family:var(--ui)}
+.fac-lin-cab{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--tinta-3)}
+.fac-lin-r{grid-template-columns:minmax(0,1fr) 120px 90px 100px}.fac-lin-r span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.fac-off{opacity:.45}.fac-lineas-ro{list-style:none;margin:0;padding:0;display:grid;gap:4px}.fac-lineas-ro li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed #e2d8c6;padding:4px 0}
+.fac-pie-form{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding-top:6px;border-top:1.5px solid #e2d8c6;font-size:17px}
+@media (max-width:900px){.fac-ver-hoja{grid-template-columns:1fr}.fac-papel{padding:16px;max-height:none}.fac-lin{grid-template-columns:1fr 60px 90px;}.fac-lin select{grid-column:1/2}.fac-lin-cab{display:none}.fac-lin-r{grid-template-columns:1fr 80px 80px}}
+/* ===== Barras de desplazamiento «glass» (estilo Apple): finas, translúcidas y redondeadas ===== */
+:root{--sb-thumb:rgba(120,120,128,.42);--sb-thumb-h:rgba(120,120,128,.68);--sb-brillo:rgba(255,255,255,.55)}
+*::-webkit-scrollbar{width:11px;height:11px;background:transparent}
+*::-webkit-scrollbar-track{background:transparent;border-radius:999px;margin:4px}
+*::-webkit-scrollbar-corner{background:transparent}
+*::-webkit-scrollbar-button{display:none;width:0;height:0}
+*::-webkit-scrollbar-thumb{background:var(--sb-thumb);border-radius:999px;border:3px solid transparent;background-clip:padding-box;box-shadow:inset 0 1px 0 var(--sb-brillo),inset 0 0 0 1px rgba(255,255,255,.18);min-height:36px;min-width:36px}
+*::-webkit-scrollbar-thumb:hover{background:var(--sb-thumb-h);background-clip:padding-box;border-width:2px}
+*::-webkit-scrollbar-thumb:active{background:rgba(110,110,118,.85);background-clip:padding-box;border-width:2px}
+@supports not selector(::-webkit-scrollbar){*{scrollbar-width:thin;scrollbar-color:var(--sb-thumb) transparent}}
+/* Barras sobre fondo oscuro (menú lateral del panel) y menú horizontal con bordes que se desvanecen */
+.p-side,.p-side *{--sb-thumb:rgba(255,255,255,.26);--sb-thumb-h:rgba(255,255,255,.46);--sb-brillo:rgba(255,255,255,.35)}
+@media (max-width:900px){.p-side nav{scroll-behavior:smooth;scroll-snap-type:x proximity;padding-bottom:6px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent 100%);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent 100%)}
+  .p-side nav>*{scroll-snap-align:start}}
 </style>
 </head>
 <body>
@@ -843,6 +887,6 @@ body.cx-abierta{overflow:hidden}
   <div class="v-pie"><span>Gíralo con el dedo. En el móvil, «Ponerlo en mi mesa» abre la cámara.</span><span>Modelo de muestra: el definitivo saldrá del escaneo del plato real.</span></div>
 </dialog>
 
-<script src="app.js?v=18"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>
