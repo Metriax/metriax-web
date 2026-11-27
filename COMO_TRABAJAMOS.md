@@ -38,6 +38,17 @@ Así, si dos personas trabajan a la vez, cada una va en su rama y GitHub avisa s
   real, así que probad con el restaurante de demo Nómada (`/app/?r=nomada`).
 - **Nunca** pongáis contraseñas, claves ni datos de clientes en el repositorio: es público.
 
+## Dos personas con la misma cuenta
+
+Somos tres personas con dos cuentas de GitHub (y de Claude): dos hermanos comparten una. Funciona igual,
+porque lo que separa el trabajo son las **ramas**, no las cuentas. Solo hay que cuidar tres cosas:
+
+- **Poned vuestro nombre en la rama**, no el de la cuenta: `javier/...`, `hermano/...`, `samuel/...`.
+  Así se ve en GitHub quién está haciendo qué aunque la cuenta sea la misma.
+- **No trabajéis los dos en la misma rama a la vez.** Cada uno su tarea y su pull request.
+- **Verificación en dos pasos compartida:** guardad los códigos de recuperación en un sitio que veáis los dos,
+  o registrad una llave de acceso (passkey) en el móvil de cada uno, para que ninguno dependa del otro para entrar.
+
 ## Primera vez (cada socio)
 
 1. Crea tu cuenta en github.com (si no la tienes), acepta la invitación a la organización **Metriax**

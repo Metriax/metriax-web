@@ -1,7 +1,7 @@
 # metriiax · instrucciones para Claude (y para cualquier persona del equipo)
 
 Este repositorio es la web pública **www.metriiax.com** y la app (`/app`, `/acceso`).
-Somos tres socios y cada uno trabaja con su propio Claude. Este archivo es la memoria compartida:
+Somos tres socios con dos cuentas (dos hermanos comparten una); cada cuenta trabaja con su propio Claude. Este archivo es la memoria compartida:
 **léelo entero antes de tocar nada.** La guía para personas está en `COMO_TRABAJAMOS.md`.
 
 ## Regla número uno: nunca se trabaja directamente en `main`
@@ -12,7 +12,7 @@ Somos tres socios y cada uno trabaja con su propio Claude. Este archivo es la me
 Flujo obligatorio para cualquier cambio:
 
 1. `git checkout main && git pull` (partir SIEMPRE de lo último publicado).
-2. Crear una rama por tarea: `nombre/tarea-corta` (p. ej. `javier/boton-reservas`, `samuel/arreglo-cocina`).
+2. Crear una rama por tarea: `nombre/tarea-corta`, con el nombre de la **persona** (no de la cuenta: hay una cuenta compartida); pregúntalo si no lo sabes (p. ej. `javier/boton-reservas`, `samuel/arreglo-cocina`).
 3. Hacer el cambio, probarlo (ver «Antes de proponer») y hacer commit con mensaje en español.
 4. `git push -u origin <rama>` y abrir un pull request contra `main` con `gh pr create`, explicando qué cambia.
 5. Vercel crea una **versión de prueba** de la rama (enlace en el pull request). Revisarla.
