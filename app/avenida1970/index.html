@@ -879,6 +879,29 @@ html[data-estilo="elegante"]{--papel:#ffffff;--papel-2:#f7f3ec;--papel-3:#efe6d8
   --ui:"Quicksand",system-ui,-apple-system,"Segoe UI",sans-serif}
 html[data-estilo="elegante"] body{background:#fff;font-family:"Quicksand",system-ui,-apple-system,"Segoe UI",sans-serif}
 </style>
+<style>
+/* Estética del local: fachada negra, letras de acero cepillado, guirnalda de bombillas cálidas y madera clara */
+html[data-estilo="elegante"]{--madera:linear-gradient(180deg,#dcbb86,#c39b63);--grano:repeating-linear-gradient(97deg,rgba(110,72,34,.13) 0 1.5px,transparent 1.5px 6px);
+  --acero:linear-gradient(180deg,#fdfdfd 0%,#c3c6ca 46%,#f1f1f1 54%,#8f9297 100%)}
+html[data-estilo="elegante"] .m-cab{background:#141414;border-bottom:0;padding-bottom:24px}
+html[data-estilo="elegante"] .m-cab::after{content:"";position:absolute;left:0;right:0;bottom:3px;height:18px;pointer-events:none;
+  background:
+    radial-gradient(circle at 14px 11px,#fff6d6 0 2px,#ffc766 2.6px 4px,rgba(255,176,72,.38) 4.6px,transparent 8px) 0 0/30px 18px repeat-x,
+    linear-gradient(#4a3d30,#4a3d30) 0 4px/100% 1px no-repeat}
+html[data-estilo="elegante"] .m-cab .t{font-family:"Marcellus",Georgia,serif;text-transform:uppercase;letter-spacing:.2em;font-size:17px;
+  background:var(--acero);-webkit-background-clip:text;background-clip:text;color:transparent}
+html[data-estilo="elegante"] .m-cab .s{color:#b9b9b9}
+html[data-estilo="elegante"] .m-num{background:var(--acero);color:#151515;border:2px solid #2b2b2b;box-shadow:0 2px 10px rgba(0,0,0,.55)}
+html[data-estilo="elegante"] .m-cab .idioma{background:#1f1f1f;border-color:#4a4a4a}
+html[data-estilo="elegante"] .m-cab .idioma button{color:#d8d8d8}
+html[data-estilo="elegante"] .m-cab .idioma button[aria-pressed="true"]{background:var(--acero);color:#111}
+html[data-estilo="elegante"] .cant button{background:var(--grano),var(--madera);color:#2a1c0e;border:1.5px solid rgba(90,60,28,.35);font-weight:700}
+html[data-estilo="elegante"] .item .pr{color:#9c6f3a}
+html[data-estilo="elegante"] .m-pie{background:#141414;border-top:0}
+html[data-estilo="elegante"] .m-pie .btn.peq{background:#232323;color:#ececec;border-color:#454545}
+html[data-estilo="elegante"] .m-pie .btn.amar:not([disabled]){background:var(--grano),var(--madera);color:#2a1c0e;border-color:rgba(90,60,28,.4)}
+html[data-estilo="elegante"] .m-pie .btn.amar[disabled]{background:#2a2621;color:#8b8172;border-color:#3c362e}
+</style>
 </head>
 <body>
 <div id="app"></div>
@@ -896,6 +919,6 @@ html[data-estilo="elegante"] body{background:#fff;font-family:"Quicksand",system
   <div class="v-pie"><span>Gíralo con el dedo. En el móvil, «Ponerlo en mi mesa» abre la cámara.</span><span>Modelo de muestra: el definitivo saldrá del escaneo del plato real.</span></div>
 </dialog>
 
-<script src="app.js?v=21"></script>
+<script src="app.js?v=22"></script>
 </body>
 </html>
