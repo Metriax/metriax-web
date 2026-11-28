@@ -7,7 +7,7 @@
 const PLATAFORMA = "metriiax";
 const BAR_DEF = {
   nombre:"Avenida 1970", ciudad:"Almendralejo · Av. de la Paz, 34", eslogan:"Bar y restaurante en la Avenida de la Paz.",
-  mesas:20, interiorHasta:12, logo:"https://www.avenida1970.es/wp-content/uploads/Logo-Avenida-1970.webp", color:"#c9a24a", color2:"#efe7d8", estilo:"noche", activo:true,
+  mesas:20, interiorHasta:12, logo:"https://www.avenida1970.es/wp-content/uploads/Logo-Avenida-1970.webp", color:"#BA8A4F", color2:"#DCB07A", estilo:"elegante", activo:true,
   camareros:[{id:"ana",n:"Ana",color:"#c9a24a"},{id:"carlos",n:"Carlos",color:"#3e7cb1"},{id:"sara",n:"Sara",color:"#b5532a"}],
   google:"", mapa:"https://www.google.com/maps/search/?api=1&query=Avenida%201970%20Almendralejo"
 };
